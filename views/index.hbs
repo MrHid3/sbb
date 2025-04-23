@@ -1,0 +1,41 @@
+<ul id="messages"></ul>
+<form id="form" action="">
+    <input id="name" autocomplete="off" />
+    <input id="sendTo" autocomplete="off" />
+    <input id="input" autocomplete="off" />
+    <button>Send</button>
+</form>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const messages = document.getElementById('messages');
+    const name = document.getElementById('name');
+    const sendTo = document.getElementById('sendTo');
+
+    name.addEventListener('input', e => {
+        socket.emit("authentication", e.target.value)
+    })
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (input.value) {
+            socket.emit('message', {
+                sendTo: sendTo.value,
+                message: input.value
+            });
+            input.value = '';
+        }
+    });
+
+
+    socket.on('message', (msg) => {
+        const item = document.createElement('li');
+        item.textContent = msg.name + " " + msg.value
+        messages.appendChild(item);
+        window.scrollTo(0, document.body.scrollHeight);
+    });
+</script>
