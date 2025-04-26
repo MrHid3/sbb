@@ -1,6 +1,7 @@
 <ul id="messages"></ul>
 <form id="form" action="">
     <input id="name" autocomplete="off" />
+    <button id="auth">auth</button>
     <input id="sendTo" autocomplete="off" />
     <input id="input" autocomplete="off" />
     <button>Send</button>
@@ -15,9 +16,11 @@
     const messages = document.getElementById('messages');
     const name = document.getElementById('name');
     const sendTo = document.getElementById('sendTo');
+    const authButton = document.getElementById('auth');
 
-    name.addEventListener('input', e => {
-        socket.emit("authentication", e.target.value)
+    authButton.addEventListener('click', () => {
+        console.log("shis", name.value)
+        socket.emit("authentication", name.value);
     })
 
     form.addEventListener('submit', (e) => {
@@ -31,10 +34,9 @@
         }
     });
 
-
-    socket.on('message', (msg) => {
+    socket.on('message', data => {
         const item = document.createElement('li');
-        item.textContent = msg.name + " " + msg.value
+        item.textContent = data.name + " " + data.message;
         messages.appendChild(item);
         window.scrollTo(0, document.body.scrollHeight);
     });
