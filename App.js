@@ -7,6 +7,8 @@ const { Server } = require('socket.io');
 const App = express();
 const server = createServer(App)
 const Io = new Server(server)
+const pool = require("./db")
+
 App.use(express.json());
 
 App.set('views', path.join(__dirname, 'views'));
@@ -65,7 +67,9 @@ Io.on('connection', (socket) => {
 
 
 
-App.get("/", function(req, res) {
+App.get("/", async function(req, res) {
+    let ret = await pool.query("SELECT * FROM users WHERE id = 1");
+    console.log(ret.rows);
     res.render("index");
 });
 
