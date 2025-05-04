@@ -1,7 +1,7 @@
+<a href="/logout">Logout</a>
 <ul id="messages"></ul>
 <form id="form" action="">
-    <input id="name" autocomplete="off" />
-    <button id="auth">auth</button>
+    <input id="id" disabled/>
     <input id="sendTo" autocomplete="off" />
     <input id="input" autocomplete="off" />
     <button>Send</button>
@@ -10,18 +10,19 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
-
     const form = document.getElementById('form');
     const input = document.getElementById('input');
     const messages = document.getElementById('messages');
-    const name = document.getElementById('name');
+    const id = document.getElementById('id');
     const sendTo = document.getElementById('sendTo');
-    const authButton = document.getElementById('auth');
+    const cookieValue = decodeURIComponent(document.cookie)
+            .split("; ")
+            .find((row) => row.startsWith("id="))
+            ?.split("=")[1];
 
-    authButton.addEventListener('click', () => {
-        console.log("shis", name.value)
-        socket.emit("authentication", name.value);
-    })
+    socket.emit("authentication", cookieValue);
+
+    id.value = "Logged in with id: " + cookieValue;
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();

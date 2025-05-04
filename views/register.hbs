@@ -1,0 +1,32 @@
+<a href="/login">Already registered? Log in here!</a>
+<form action="/" method="POST">
+    <input type="text" name="username" placeholder="username">
+    <input type="password" name="password" placeholder="Password">
+    <input type="submit" value="Register">
+</form>
+
+<script>
+    function userExists() {
+        console.log('User exists');
+    }
+
+    document.querySelector('form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const username = document.querySelector('input[name="username"]').value;
+        const password = document.querySelector('input[name="password"]').value;
+        const res = await fetch('/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        })
+        if (res == "USEREXISTS")
+            userExists();
+        else
+            location.replace('/');
+    })
+</script>

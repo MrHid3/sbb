@@ -1,0 +1,32 @@
+<a href="/register">Not registered? Register here!</a>
+<form action="/" method="POST">
+    <input type="text" name="username" placeholder="username">
+    <input type="password" name="password" placeholder="Password">
+    <input type="submit" value="Login">
+</form>
+
+<script>
+    function wrongCredentials() {
+        console.log('Wrong credentials');
+    }
+
+    document.querySelector('form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const username = document.querySelector('input[name="username"]').value;
+        const password = document.querySelector('input[name="password"]').value;
+        const res = await fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        })
+        if (res == "WRONGCREDENTIALS")
+            wrongCredentials();
+        else
+            location.replace('/');
+    })
+</script>
