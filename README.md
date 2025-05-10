@@ -8,7 +8,7 @@ In time, this will hopefully become a clone of Signal.
 - [ ] implement Diffie-Helman
 - [ ] adding friends
 - [ ] implement Double Ratchet
-- [ ] message storing
+- [ ] storing messages on device
 - [ ] read markings
 
 ### SIDE-QUESTS
