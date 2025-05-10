@@ -20,3 +20,4 @@ by how likely/easy they are to be implemented (more or less)
 
 ### MAYBE ONE DAY
 - [ ] voice calls
+- [ ] mobile app
