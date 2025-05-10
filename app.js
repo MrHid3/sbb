@@ -8,7 +8,7 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const server = createServer(app)
 const io = new Server(server)
-const pool = require("./db")
+const pool = require("./server_scripts/db")
 
 app.use(cookieParser());
 app.use(express.json());
@@ -45,8 +45,7 @@ function idToSocket(id){
 }
 
 io.on('connection', (socket) => {
-    console.log('a user connected');
-    socket.on("authentication", id => {
+    socket.on("activity", id => { //add user to list of active users
         cleanSocket(socket.id);
         users.push({socket: socket.id, id: id});
         console.log(users);
@@ -69,7 +68,7 @@ io.on('connection', (socket) => {
 
 app.get("/", async function(req, res) {
     if(!req.cookies.id)
-        res.redirect(`/login`);
+        // res.redirect(`/login`);
     res.render("index");
 });
 
@@ -81,7 +80,7 @@ app.get("/login", function(req, res) {
 
 app.post("/login", async function(req, res) {
     const user = await pool.query("SELECT * FROM users where username = $1", [req.body.username]);
-    if(user.rows.length != 1){
+    if(user.rows.length != 1 || user.rows[0].password != req.body.password){
         res.send("WRONGCREDENTIALS");
         return;
     }
@@ -103,9 +102,6 @@ app.post("/register", async function(req, res) {
         res.send("USEREXISTS");
         return;
     }
-    await pool.query("INSERT INTO users(username, password) values($1, $2)", [req.body.username, req.body.password]);
-    const user = await pool.query("SELECT id FROM users WHERE username = $1", [req.body.username]);
-    res.cookie("id", user.rows[0].id);
     res.send("USERREGISTERED");
 })
 
@@ -113,6 +109,8 @@ app.get("/logout", function(req, res) {
     res.clearCookie("id");
     res.redirect("/");
 })
+
+app.use(express.static('./public'));
 
 server.listen(3000, function () {
     console.log("http://localhost:3000")

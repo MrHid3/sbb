@@ -3,8 +3,7 @@
 In time, this will hopefully become a clone of Signal.
 
 ### TO-DO
-- [ ] actually encrypt the database
-- [ ] session cookies
+- [x] user creation
 - [ ] implement Diffie-Helman
 - [ ] adding friends
 - [ ] implement Double Ratchet

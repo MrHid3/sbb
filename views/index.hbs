@@ -8,37 +8,4 @@
 </form>
 
 <script src="/socket.io/socket.io.js"></script>
-<script>
-    const socket = io();
-    const form = document.getElementById('form');
-    const input = document.getElementById('input');
-    const messages = document.getElementById('messages');
-    const id = document.getElementById('id');
-    const sendTo = document.getElementById('sendTo');
-    const cookieValue = decodeURIComponent(document.cookie)
-            .split("; ")
-            .find((row) => row.startsWith("id="))
-            ?.split("=")[1];
-
-    socket.emit("authentication", cookieValue);
-
-    id.value = "Logged in with id: " + cookieValue;
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (input.value) {
-            socket.emit('message', {
-                sendTo: sendTo.value,
-                message: input.value
-            });
-            input.value = '';
-        }
-    });
-
-    socket.on('message', data => {
-        const item = document.createElement('li');
-        item.textContent = data.name + " " + data.message;
-        messages.appendChild(item);
-        window.scrollTo(0, document.body.scrollHeight);
-    });
-</script>
+<script src="scripts/index.js"></script>
