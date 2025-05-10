@@ -12,9 +12,10 @@ In time, this will hopefully become a clone of Signal.
 - [ ] read markings
 
 ### SIDE-QUESTS
-by how likely/easy they are to be implemented
+by how likely/easy they are to be implemented (more or less)
 - [ ] profile pictures
 - [ ] sending images
+- [ ] private conversations
 - [ ] someone is writing bubbles
 - [ ] group chats
 
