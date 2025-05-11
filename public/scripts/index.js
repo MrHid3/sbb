@@ -6,22 +6,13 @@ const id = document.getElementById('id');
 const sendTo = document.getElementById('sendTo');
 
 //create account secret
-if (!localStorage.getItem('account_secret')){
-    const s = async () => {
-        let account_secret = await window.crypto.subtle.generateKey(
-            {
-                name: "HMAC",
-                hash: {name: "SHA-512"},
-            },
-            true,
-            ["sign", "verify"],
-        );
-        let exported = await crypto.subtle.exportKey("jwk", account_secret);
-        localStorage.setItem('account_secret', JSON.stringify(exported.k));
-        console.log(exported);
-    }
-    s();
+if (localStorage.getItem('account_secret')){
+
 }
+
+const publickKey = JSON.parse(localStorage.getItem('publickKey'));
+const privateKey = JSON.parse(localStorage.getItem('privateKey'));
+const signedKey = JSON.parse(localStorage.getItem('signedKey'));
 
 form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -33,6 +24,10 @@ form.addEventListener('submit', (e) => {
         input.value = '';
     }
 });
+
+socket.emit('activity', {
+
+})
 
 socket.on('message', data => {
     const item = document.createElement('li');

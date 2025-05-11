@@ -44,6 +44,7 @@ function idToSocket(id){
     return false;
 }
 
+
 io.on('connection', (socket) => {
     socket.on("activity", id => { //add user to list of active users
         cleanSocket(socket.id);
@@ -67,8 +68,6 @@ io.on('connection', (socket) => {
 });
 
 app.get("/", async function(req, res) {
-    if(!req.cookies.id)
-        // res.redirect(`/login`);
     res.render("index");
 });
 
@@ -97,11 +96,39 @@ app.get("/register", function(req, res) {
 })
 
 app.post("/register", async function(req, res) {
-    const users = await pool.query("SELECT * FROM users where username = $1", [req.body.username]);
-    if(users.rows.length > 0){
+    const users = await pool.query("SELECT count(*) FROM users WHERE username = $1", [req.body.username]);
+    if(users.rows[0].count > 0){
         res.send("USEREXISTS");
         return;
     }
+    const identityPublicKeyEncoded = new TextEncoder().encode(JSON.parse(req.body.identityPublicKey));
+    const identityPublicKeyParsed = JSON.parse(req.body.identityPublicKey);
+    const identityPublicKeyImported = await crypto.subtle.importKey(
+        "jwk",
+        identityPublicKeyParsed,
+        {
+            name: "ECDSA",
+            namedCurve: "P-384",
+        },
+        true,
+        ["verify"]
+    );
+    let checkSignature = await crypto.subtle.verify(
+        {
+            name: "ECDSA",
+            namedCurve: "P-384",
+        },
+        identityPublicKeyImported,
+        req.body.identitySignedKey,
+        identityPublicKeyEncoded
+    )
+    if(!checkSignature){
+        res.send("WRONGSIGNATURE");
+        return;
+    }
+    await pool.query("INSERT INTO users(username, identityPublicKey, identitySignedKey) values($1, $2, $3)",
+        [req.body.username, identityPublicKeyImported, req.body.identitySignedKey]);
+    console.log(req.body)
     res.send("USERREGISTERED");
 })
 

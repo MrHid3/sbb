@@ -13,6 +13,7 @@ In time, this will hopefully become a clone of Signal.
 ### SIDE-QUESTS
 by how likely/easy they are to be implemented (more or less)
 - [ ] profile pictures
+- [ ] login - deriving public key from provided private
 - [ ] sending images
 - [ ] private conversations
 - [ ] someone is writing bubbles
