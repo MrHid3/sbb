@@ -44,6 +44,14 @@ function idToSocket(id){
     return false;
 }
 
+function base64ToArrayBuffer(string) {
+    const binaryString = atob(string);
+    const uint8Array = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        uint8Array[i] = binaryString.charCodeAt(i);
+    }
+    return uint8Array.buffer;
+}
 
 io.on('connection', (socket) => {
     socket.on("activity", id => { //add user to list of active users
@@ -96,38 +104,44 @@ app.get("/register", function(req, res) {
 })
 
 app.post("/register", async function(req, res) {
+    //username must be unique
     const users = await pool.query("SELECT count(*) FROM users WHERE username = $1", [req.body.username]);
     if(users.rows[0].count > 0){
-        res.send("USEREXISTS");
+        res.send("USERNAMETAKEN");
         return;
     }
-    const identityPublicKeyEncoded = new TextEncoder().encode(JSON.parse(req.body.identityPublicKey));
+    //import the public key so it can be used to verify
     const identityPublicKeyParsed = JSON.parse(req.body.identityPublicKey);
+    const identityPublicKeyEncoded = new TextEncoder().encode(req.body.identityPublicKey);
     const identityPublicKeyImported = await crypto.subtle.importKey(
         "jwk",
         identityPublicKeyParsed,
         {
             name: "ECDSA",
             namedCurve: "P-384",
+            hash: "SHA-256"
         },
         true,
         ["verify"]
     );
+    //verify user's signature
     let checkSignature = await crypto.subtle.verify(
         {
             name: "ECDSA",
             namedCurve: "P-384",
+            hash: "SHA-256"
         },
         identityPublicKeyImported,
-        req.body.identitySignedKey,
+        base64ToArrayBuffer(req.body.identitySignedKey),
         identityPublicKeyEncoded
     )
+    //if signature is valid register the user
     if(!checkSignature){
         res.send("WRONGSIGNATURE");
         return;
     }
     await pool.query("INSERT INTO users(username, identityPublicKey, identitySignedKey) values($1, $2, $3)",
-        [req.body.username, identityPublicKeyImported, req.body.identitySignedKey]);
+        [req.body.username, req.body.identityPublicKey, req.body.identitySignedKey]);
     console.log(req.body)
     res.send("USERREGISTERED");
 })

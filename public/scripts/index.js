@@ -25,7 +25,23 @@ form.addEventListener('submit', (e) => {
     }
 });
 
-socket.emit('activity', {
+socket.on('providePreKey', async () => {
+    let preKeys;
+    //check if prekeys exist in localstorage
+    if(localStorage.getItem('preKeys') == null){
+        preKeys = [];
+    }else{
+        preKeys = JSON.parse(localStorage.getItem('preKeys'));
+    };
+    //generate pair
+    const pair = await crypto.subtle.generateKey({
+            name: "ECDSA",
+            namedCurve: "P-384",
+        },
+        true,
+        ["sign", "verify"],
+    );
+    //preprocess before sending and storing
 
 })
 
@@ -35,5 +51,3 @@ socket.on('message', data => {
     messages.appendChild(item);
     window.scrollTo(0, document.body.scrollHeight);
 });
-
-
