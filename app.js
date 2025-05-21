@@ -1,3 +1,5 @@
+import '/public/scripts/algs'
+
 const express = require('express');
 const path = require("path");
 const { createServer } = require("http")
@@ -44,17 +46,8 @@ function idToSocket(id){
     return false;
 }
 
-function base64ToArrayBuffer(string) {
-    const binaryString = atob(string);
-    const uint8Array = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        uint8Array[i] = binaryString.charCodeAt(i);
-    }
-    return uint8Array.buffer;
-}
-
 io.on('connection', (socket) => {
-    socket.on("activity", id => { //add user to list of active users
+    socket.on("activity", confirmation => { //add user to list of active users
         cleanSocket(socket.id);
         users.push({socket: socket.id, id: id});
         console.log(users);
@@ -110,31 +103,7 @@ app.post("/register", async function(req, res) {
         res.send("USERNAMETAKEN");
         return;
     }
-    //import the public key so it can be used to verify
-    const identityPublicKeyParsed = JSON.parse(req.body.identityPublicKey);
-    const identityPublicKeyEncoded = new TextEncoder().encode(req.body.identityPublicKey);
-    const identityPublicKeyImported = await crypto.subtle.importKey(
-        "jwk",
-        identityPublicKeyParsed,
-        {
-            name: "ECDSA",
-            namedCurve: "P-384",
-            hash: "SHA-256"
-        },
-        true,
-        ["verify"]
-    );
-    //verify user's signature
-    let checkSignature = await crypto.subtle.verify(
-        {
-            name: "ECDSA",
-            namedCurve: "P-384",
-            hash: "SHA-256"
-        },
-        identityPublicKeyImported,
-        base64ToArrayBuffer(req.body.identitySignedKey),
-        identityPublicKeyEncoded
-    )
+    const checkSignature = await verifySignature(req.body.identityPublicKey, req.body.identitySignedKey)
     //if signature is valid register the user
     if(!checkSignature){
         res.send("WRONGSIGNATURE");
@@ -147,7 +116,6 @@ app.post("/register", async function(req, res) {
 })
 
 app.get("/logout", function(req, res) {
-    res.clearCookie("id");
     res.redirect("/");
 })
 

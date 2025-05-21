@@ -25,24 +25,20 @@ form.addEventListener('submit', (e) => {
     }
 });
 
-socket.on('providePreKey', async () => {
+socket.emit()
+
+socket.on('providePreKey', async (preKeyNumber) => {
     let preKeys;
     //check if prekeys exist in localstorage
     if(localStorage.getItem('preKeys') == null){
-        preKeys = [];
+        preKeys = [null, null, null, null];
     }else{
         preKeys = JSON.parse(localStorage.getItem('preKeys'));
     };
-    //generate pair
-    const pair = await crypto.subtle.generateKey({
-            name: "ECDSA",
-            namedCurve: "P-384",
-        },
-        true,
-        ["sign", "verify"],
-    );
-    //preprocess before sending and storing
-
+    const [publicPreKey, privatePreKey, _] = await generateECDSAKeypair(preKeyNumber);
+    preKeys[preKeyNumber] = privatePreKey;
+    localStorage.setItem('preKeys', JSON.stringify(preKeys));
+    socket.emit('providePreKey', publicPreKey);
 })
 
 socket.on('message', data => {
