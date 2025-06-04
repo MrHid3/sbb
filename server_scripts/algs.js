@@ -14,9 +14,7 @@ class algs{
         const identityPrivateKey = await crypto.subtle.exportKey("jwk", identityKeyPair.privateKey);
         const identityPublicKey = await crypto.subtle.exportKey("jwk", identityKeyPair.publicKey);
         //create signed key and
-
         let signedText;
-        let identitySignedKeyString;
         const identityPublicKeyEncoded = new TextEncoder().encode(JSON.stringify(identityPublicKey));
         if(provideSignature) {
             if (textToSign == ""){
@@ -42,10 +40,10 @@ class algs{
                 );
             }
             const identitySignedKeyArray = Array.from(new Uint8Array(signedText))
-            identitySignedKeyString = btoa(String.fromCharCode.apply(null, identitySignedKeyArray));
+            const identitySignedKeyString = btoa(String.fromCharCode.apply(null, identitySignedKeyArray));
         }
         //return the keys
-        return [identityPublicKey, identityPrivateKey, identitySignedKeyString]
+        return [identityPublicKey, identityPrivateKey, signedText]
     }
 
 //convert sendable/storable signature to one that can be verified
@@ -87,4 +85,4 @@ class algs{
     }
 }
 
-export default algs;
+module.exports = algs;

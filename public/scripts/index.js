@@ -1,18 +1,19 @@
-const socket = io();
+import algs from "./algs.js"
+
+const socket = io({
+    withCredentials: true //send cookies
+});
 const form = document.getElementById('form');
 const input = document.getElementById('input');
 const messages = document.getElementById('messages');
 const id = document.getElementById('id');
 const sendTo = document.getElementById('sendTo');
 
-//create account secret
-if (localStorage.getItem('account_secret')){
-
-}
-
-const publickKey = JSON.parse(localStorage.getItem('publickKey'));
+//TODO: logout if any of these is missing
+const publicKey = JSON.parse(localStorage.getItem('publicKey'));
 const privateKey = JSON.parse(localStorage.getItem('privateKey'));
 const signedKey = JSON.parse(localStorage.getItem('signedKey'));
+const username = JSON.parse(localStorage.getItem('username'));
 
 form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -25,8 +26,7 @@ form.addEventListener('submit', (e) => {
     }
 });
 
-socket.emit()
-
+//provide prekeys if requested by server
 socket.on('providePreKey', async (preKeyNumber) => {
     let preKeys;
     //check if prekeys exist in localstorage
@@ -34,10 +34,11 @@ socket.on('providePreKey', async (preKeyNumber) => {
         preKeys = [null, null, null, null];
     }else{
         preKeys = JSON.parse(localStorage.getItem('preKeys'));
-    };
-    const [publicPreKey, privatePreKey, _] = await generateECDSAKeypair(preKeyNumber);
+    }
+    const [publicPreKey, privatePreKey, _] = await algs.generateECDSAKeypair();
     preKeys[preKeyNumber] = privatePreKey;
     localStorage.setItem('preKeys', JSON.stringify(preKeys));
+
     socket.emit('providePreKey', publicPreKey);
 })
 

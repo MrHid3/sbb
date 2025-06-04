@@ -1,5 +1,5 @@
-import '/public/scripts/algs'
-
+const algs = require("./server_scripts/algs.js")
+const pool = require("./server_scripts/db")
 const express = require('express');
 const path = require("path");
 const { createServer } = require("http")
@@ -7,22 +7,22 @@ const hbs = require('express-handlebars');
 const formidable = require('formidable');
 const { Server } = require('socket.io');
 const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+const cookie = require('cookie');
 const app = express();
-const server = createServer(app)
+const server = createServer(app);
 const io = new Server(server)
-const pool = require("./server_scripts/db")
-
 app.use(cookieParser());
 app.use(express.json());
-
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
 app.engine('hbs', hbs.engine({ defaultLayout: 'layout.hbs' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
-
-let users = [];
+// app.use(cors({
+//     credentials: true //allow cookies
+// }))
 
 function cleanSocket(socket){  //if a socket was previously assigned to a user, remove it
     for(let i = 0; i < users.length; i++){
@@ -46,13 +46,17 @@ function idToSocket(id){
     return false;
 }
 
-io.on('connection', (socket) => {
-    socket.on("activity", confirmation => { //add user to list of active users
-        cleanSocket(socket.id);
-        users.push({socket: socket.id, id: id});
-        console.log(users);
-    })
-
+io.on('connection', async (socket) => {
+    //verify user's authtoken
+    const cookies = socket.handshake.headers.cookie;
+    const parsedCookies = cookie.parse(cookies || ''); // Parse cookie string
+    const authToken = parsedCookies.authToken;
+    const verifyAuthTokenQuery = await pool.query('SELECT id FROM users WHERE authtoken = $1', [authToken]);
+    if(verifyAuthTokenQuery.rows.length == 0) {
+        socket.disconnect();
+        }else{
+            const addToSocketListQuery = await pool.query('INSERT into live(userid, socket) values($1, $2)', [verifyAuthTokenQuery.rows[0].id, socket.id])
+    }
     socket.on('message', async(data) => {
         let socketID = idToSocket(data.sendTo);
         if(socketID){
@@ -62,9 +66,8 @@ io.on('connection', (socket) => {
         }
     })
 
-    socket.on('disconnect', () => {
-        users.filter(user => user.socket == socket.id)
-        console.log('user disconnected');
+    socket.on('disconnect', async () => {
+        await pool.query("DELETE FROM live WHERE socket = $1", [socket.id]);
     });
 });
 
@@ -103,15 +106,20 @@ app.post("/register", async function(req, res) {
         res.send("USERNAMETAKEN");
         return;
     }
-    const checkSignature = await verifySignature(req.body.identityPublicKey, req.body.identitySignedKey)
+    const checkSignature = await algs.verifySignature(req.body.identityPublicKey, req.body.identitySignedKey)
     //if signature is valid register the user
     if(!checkSignature){
         res.send("WRONGSIGNATURE");
         return;
     }
-    await pool.query("INSERT INTO users(username, identityPublicKey, identitySignedKey) values($1, $2, $3)",
-        [req.body.username, req.body.identityPublicKey, req.body.identitySignedKey]);
-    console.log(req.body)
+    const authToken = jwt.sign({ username: req.body.username }, 'r$%Es^$F89h)hb(Y*fR^S4#%W4R68g(Oig');
+    await pool.query("INSERT INTO users(username, identityPublicKey, identitySignedKey, authToken) values($1, $2, $3, $4)",
+        [req.body.username, req.body.identityPublicKey, req.body.identitySignedKey, authToken]);
+    res.cookie('authToken', authToken,{
+        httpOnly: true,
+        secure: true,
+        expires: new Date('2077-01-01T00:00:00Z')
+    });
     res.send("USERREGISTERED");
 })
 
