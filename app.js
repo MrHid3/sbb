@@ -24,27 +24,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 //     credentials: true //allow cookies
 // }))
 
-function cleanSocket(socket){  //if a socket was previously assigned to a user, remove it
-    for(let i = 0; i < users.length; i++){
-        if(users[i].socket == socket)
-            users.splice(i)
-    }
-}
-
-function socketToId(socket){
-    for(let i = 0; i < users.length; i++){
-        if(users[i].socket == socket)
-            return users[i].id;
-    }
-    return false;
-}
-
-function idToSocket(id){
-    for(let i = 0; i < users.length; i++)
-        if(users[i].id == id)
-            return users[i].socket;
-    return false;
-}
+//prepare databases
+pool.query('truncate live')
 
 io.on('connection', async (socket) => {
     //verify user's authtoken
@@ -57,6 +38,27 @@ io.on('connection', async (socket) => {
         }else{
             const addToSocketListQuery = await pool.query('INSERT into live(userid, socket) values($1, $2)', [verifyAuthTokenQuery.rows[0].id, socket.id])
     }
+
+    //check if user has 4 prekeys on the server
+    const enoughPreKeys = await pool.query('SELECT COUNT(1) amount FROM prekey JOIN live ON live.userid = prekey.userid WHERE live.socket = $1', [socket.id])
+    //if not, ask for the missing prekeys
+    if(enoughPreKeys.rows[0].amount < 4){
+        io.to(socket.id).emit('askForPreKeys', {amount: 4 - enoughPreKeys.rows[0].amount});
+    }
+
+    socket.on('providePreKeys', async(data) => {
+        const userIdQuery = await pool.query('select userid from live where socket = $1', [socket.id]);
+        const userId = userIdQuery.rows[0].userid;
+        data.prekeys.forEach(async (prekey) => {
+            if(await algs.verifySignature(prekey.prekey, prekey.signature)) {
+                await pool.query('INSERT INTO prekey(userid, prekey, signature) values($1, $2, $3)',
+                    [userId, JSON.stringify(prekey.prekey), JSON.stringify(prekey.signature)])
+            }else{
+                console.log(prekey)
+            }
+        })
+    })
+
     socket.on('message', async(data) => {
         let socketID = idToSocket(data.sendTo);
         if(socketID){
@@ -76,20 +78,20 @@ app.get("/", async function(req, res) {
 });
 
 app.get("/login", function(req, res) {
-    if(req.cookies.id)
-        res.redirect("/");
     res.render("login");
 })
 
-app.post("/login", async function(req, res) {
-    const user = await pool.query("SELECT * FROM users where username = $1", [req.body.username]);
-    if(user.rows.length != 1 || user.rows[0].password != req.body.password){
-        res.send("WRONGCREDENTIALS");
-        return;
-    }
-    res.cookie("id", user.rows[0].id);
-    res.send("USERREGISTERED");
-})
+//TODO: login
+
+// app.post("/login", async function(req, res) {
+//     const user = await pool.query("SELECT * FROM users where username = $1", [req.body.username]);
+//     if(user.rows.length != 1 || user.rows[0].password != req.body.password){
+//         res.send("WRONGCREDENTIALS");
+//         return;
+//     }
+//     res.cookie("id", user.rows[0].id);
+//     res.send("USERREGISTERED");
+// })
 
 app.get("/register", function(req, res) {
     if(req.cookies.id){
@@ -106,7 +108,7 @@ app.post("/register", async function(req, res) {
         res.send("USERNAMETAKEN");
         return;
     }
-    const checkSignature = await algs.verifySignature(req.body.identityPublicKey, req.body.identitySignedKey)
+    const checkSignature = await algs.verifySignature(JSON.parse(req.body.identityPublicKey), JSON.parse(req.body.identitySignedKey))
     //if signature is valid register the user
     if(!checkSignature){
         res.send("WRONGSIGNATURE");
@@ -125,6 +127,11 @@ app.post("/register", async function(req, res) {
 
 app.get("/logout", function(req, res) {
     res.redirect("/");
+})
+
+app.post("/searchuser", async function(req, res) {
+    const usersLikeQuery = await pool.query("SELECT id, username FROM users WHERE username like $1", [`%${req.body.query}%`]);
+    res.send(usersLikeQuery.rows);
 })
 
 app.use(express.static('./public'));

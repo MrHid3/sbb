@@ -1,11 +1,20 @@
 <a href="/logout">Logout</a>
-<ul id="messages"></ul>
-<form id="form" action="">
-    <input id="id" disabled/>
-    <input id="sendTo" autocomplete="off" />
-    <input id="input" autocomplete="off" />
-    <button>Send</button>
-</form>
+<div id="friends">
+    <form action="#" id="search-user-form">
+        <datalist id="user-suggestions"></datalist>
+        <input id="search-user-input" type="text" autoComplete="on" list="user-suggestions"/>
+    </form>
+</div>
+<div id="chat">
+    <ul id="messages"></ul>
+    <form id="form" action="">
+        <input id="id" disabled/>
+        <input id="sendTo" autocomplete="off" />
+        <input id="input" autocomplete="off" />
+        <button>Send</button>
+    </form>
+
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="scripts/index.js" type="module"></script>

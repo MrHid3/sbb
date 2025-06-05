@@ -60,8 +60,8 @@ class algs{
 
     static async verifySignature(publicKey, signature) {
         //import the public key so it can be used to verify
-        const publicKeyParsed = JSON.parse(publicKey);
-        const publicKeyEncoded = new TextEncoder().encode(publicKey);
+        const publicKeyParsed = publicKey;
+        const publicKeyEncoded = new TextEncoder().encode(JSON.stringify(publicKey));
         const publicKeyImported = await crypto.subtle.importKey(
             "jwk",
             publicKeyParsed,
@@ -81,7 +81,7 @@ class algs{
                 hash: "SHA-256"
             },
             publicKeyImported,
-            algs.base64ToArrayBuffer(JSON.parse(signature)),
+            algs.base64ToArrayBuffer(signature),
             publicKeyEncoded
         )
     }
