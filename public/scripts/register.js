@@ -4,7 +4,10 @@ import algs from './algs.js'
 document.querySelector('form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const username = document.querySelector('input[name="username"]').value;
-    const [identityPublicKey, identityPrivateKey, identitySignedKey] = await algs.generateECDSAKeypair(true);
+    //create public and private keys and prekeys, sign the public prekey
+    const [publicPrekey, privatePrekey] = await algs.generateECDSAKeypair();
+    const [identityPublicKey, identityPrivateKey, signedPrekey] = await algs.generateECDSAKeypair(true, publicPrekey);
+    console.log(publicPrekey);
     const res = await fetch('register', {
         method: 'POST',
         headers: {
@@ -13,18 +16,21 @@ document.querySelector('form').addEventListener('submit', async function(e) {
         body: JSON.stringify({
             username: username,
             identityPublicKey: JSON.stringify(identityPublicKey),
-            identitySignedKey: JSON.stringify(identitySignedKey),
+            publicPrekey: JSON.stringify(publicPrekey),
+            prekeySignature: JSON.stringify(signedPrekey),
         })
     })
-    if (res == "USERNAMETAKEN")
+    const text = await res.text()
+    if (text == "USERNAMETAKEN")
         userExists();
-    else if (res == "WRONGSIGNATURE")
+    else if (await text == "WRONGSIGNATURE")
         wrongSignature();
-    else{
+    else if(res.status == 200){
         //save the fuckers to localstorage
         localStorage.setItem('username', JSON.stringify(username));
         localStorage.setItem('publicKey', JSON.stringify(identityPublicKey));
         localStorage.setItem('privateKey', JSON.stringify(identityPrivateKey));
+        localStorage.setItem('privatePrekey', JSON.stringify(privatePrekey));
         window.location.href = "/";
     }
 })

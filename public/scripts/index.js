@@ -29,6 +29,7 @@ const username = JSON.parse(localStorage.getItem('username'));
 // });
 
 //search for users
+const searchUserForm = document.querySelector('#search-user-form');
 const searchUserInput = document.querySelector('#search-user-input');
 const userSuggestions = document.querySelector('#user-suggestions');
 
@@ -52,27 +53,35 @@ searchUserInput.addEventListener('input', async (e) => {
                 const option = document.createElement('option');
                 option.classList.add('suggestion');
                 option.textContent = suggestion.username;
-                option.value = suggestion.id;
+                option.value = suggestion.username;
                 userSuggestions.appendChild(option);
             })
         }
     }
 })
 
+//diffie-hellman x3d
+searchUserForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+})
+
 //provide prekeys if requested by server
 socket.on('askForPreKeys', async (data) => {
-    let preKeys;
+    let preKeys, keyno;
     let publicPreKeys = [];
     //check if prekeys exist in localstorage
     if(localStorage.getItem('preKeys') == null){
         preKeys = [];
+        keyno = 0;
     }else{
         preKeys = JSON.parse(localStorage.getItem('preKeys'));
+        keyno = preKeys.length;
     }
     for(let i = 0; i < data.amount; i++) {
-        const [publicPreKey, privatePreKey, signature] = await algs.generateECDSAKeypair(1);
-        preKeys.push(privatePreKey);
-        publicPreKeys.push({prekey: publicPreKey, signature: signature});
+        const [publicPreKey, privatePreKey, _] = await algs.generateECDSAKeypair();
+        preKeys.push({prekey: privatePreKey, keyno: keyno + i});
+        publicPreKeys.push({prekey: publicPreKey, keyno: keyno + i});
     }
     localStorage.setItem('preKeys', JSON.stringify(preKeys));
     socket.emit('providePreKeys', {prekeys: publicPreKeys});

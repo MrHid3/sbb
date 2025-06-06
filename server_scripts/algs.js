@@ -36,7 +36,7 @@ class algs{
                         hash: "SHA-256"
                     },
                     identityKeyPair.privateKey,
-                    identityPublicKeyEncoded
+                    textToSignEncoded
                 );
             }
             const identitySignedKeyArray = Array.from(new Uint8Array(signedText))
@@ -56,10 +56,9 @@ class algs{
         return uint8Array.buffer;
     }
 
-    static async verifySignature(publicKey, signature) {
+    static async verifySignature(publicKey, signature, signedText = "") {
         //import the public key so it can be used to verify
         const publicKeyParsed = publicKey;
-        const publicKeyEncoded = new TextEncoder().encode(JSON.stringify(publicKey));
         const publicKeyImported = await crypto.subtle.importKey(
             "jwk",
             publicKeyParsed,
@@ -72,16 +71,31 @@ class algs{
             ["verify"]
         );
         //verify user's signature
-        return await crypto.subtle.verify(
-            {
-                name: "ECDSA",
-                namedCurve: "P-384",
-                hash: "SHA-256"
-            },
-            publicKeyImported,
-            algs.base64ToArrayBuffer(signature),
-            publicKeyEncoded
-        )
+        if(signedText == ""){
+            const publicKeyEncoded = new TextEncoder().encode(JSON.stringify(publicKey));
+            return await crypto.subtle.verify(
+                {
+                    name: "ECDSA",
+                    namedCurve: "P-384",
+                    hash: "SHA-256"
+                },
+                publicKeyImported,
+                algs.base64ToArrayBuffer(signature),
+                publicKeyEncoded
+            )
+        }else{
+            const textEncoded = new TextEncoder().encode(JSON.stringify(signedText));
+            return await crypto.subtle.verify(
+                {
+                    name: "ECDSA",
+                    namedCurve: "P-384",
+                    hash: "SHA-256"
+                },
+                publicKeyImported,
+                algs.base64ToArrayBuffer(signature),
+                textEncoded
+            )
+        }
     }
 }
 

@@ -35,27 +35,23 @@ io.on('connection', async (socket) => {
     const verifyAuthTokenQuery = await pool.query('SELECT id FROM users WHERE authtoken = $1', [authToken]);
     if(verifyAuthTokenQuery.rows.length == 0) {
         socket.disconnect();
-        }else{
-            const addToSocketListQuery = await pool.query('INSERT into live(userid, socket) values($1, $2)', [verifyAuthTokenQuery.rows[0].id, socket.id])
+    }else{
+        const addToSocketListQuery = await pool.query('INSERT into live(userid, socket) values($1, $2)', [verifyAuthTokenQuery.rows[0].id, socket.id])
     }
 
     //check if user has 4 prekeys on the server
-    const enoughPreKeys = await pool.query('SELECT COUNT(1) amount FROM prekey JOIN live ON live.userid = prekey.userid WHERE live.socket = $1', [socket.id])
+    const enoughPreKeysQuery = await pool.query('SELECT COUNT(1) amount FROM prekey JOIN live ON live.userid = prekey.userid WHERE live.socket = $1', [socket.id])
     //if not, ask for the missing prekeys
-    if(enoughPreKeys.rows[0].amount < 4){
-        io.to(socket.id).emit('askForPreKeys', {amount: 4 - enoughPreKeys.rows[0].amount});
+    if(enoughPreKeysQuery.rows[0].amount < 4){
+        io.to(socket.id).emit('askForPreKeys', {amount: 4 - enoughPreKeysQuery.rows[0].amount});
     }
 
     socket.on('providePreKeys', async(data) => {
         const userIdQuery = await pool.query('select userid from live where socket = $1', [socket.id]);
         const userId = userIdQuery.rows[0].userid;
         data.prekeys.forEach(async (prekey) => {
-            if(await algs.verifySignature(prekey.prekey, prekey.signature)) {
-                await pool.query('INSERT INTO prekey(userid, prekey, signature) values($1, $2, $3)',
-                    [userId, JSON.stringify(prekey.prekey), JSON.stringify(prekey.signature)])
-            }else{
-                console.log(prekey)
-            }
+            await pool.query('INSERT INTO prekey(userid, keyno, prekey) values($1, $2, $3)',
+                [userId, prekey.keyno, JSON.stringify(prekey.prekey)])
         })
     })
 
@@ -105,18 +101,18 @@ app.post("/register", async function(req, res) {
     //username must be unique
     const users = await pool.query("SELECT count(*) FROM users WHERE username = $1", [req.body.username]);
     if(users.rows[0].count > 0){
-        res.send("USERNAMETAKEN");
+        res.status(400).send("USERNAMETAKEN");
         return;
     }
-    const checkSignature = await algs.verifySignature(JSON.parse(req.body.identityPublicKey), JSON.parse(req.body.identitySignedKey))
+    const checkSignature = await algs.verifySignature(JSON.parse(req.body.identityPublicKey), JSON.parse(req.body.prekeySignature), JSON.parse(req.body.publicPrekey))
     //if signature is valid register the user
     if(!checkSignature){
-        res.send("WRONGSIGNATURE");
+        res.status(400).send("WRONGSIGNATURE")
         return;
     }
     const authToken = jwt.sign({ username: req.body.username }, 'r$%Es^$F89h)hb(Y*fR^S4#%W4R68g(Oig');
-    await pool.query("INSERT INTO users(username, identityPublicKey, identitySignedKey, authToken) values($1, $2, $3, $4)",
-        [req.body.username, req.body.identityPublicKey, req.body.identitySignedKey, authToken]);
+    await pool.query("INSERT INTO users(username, identityPublicKey, prekey, signedprekey, authToken) values($1, $2, $3, $4, $5)",
+        [req.body.username, req.body.identityPublicKey, req.body.publicPrekey, req.body.prekeySignature, authToken]);
     res.cookie('authToken', authToken,{
         httpOnly: true,
         secure: true,
