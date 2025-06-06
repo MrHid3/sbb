@@ -50,7 +50,7 @@ io.on('connection', async (socket) => {
         const userIdQuery = await pool.query('select userid from live where socket = $1', [socket.id]);
         const userId = userIdQuery.rows[0].userid;
         data.prekeys.forEach(async (prekey) => {
-            await pool.query('INSERT INTO prekey(userid, keyno, prekey) values($1, $2, $3)',
+            await pool.query('INSERT INTO prekey(userid, keyno, oneTimePreKey) values($1, $2, $3)',
                 [userId, prekey.keyno, JSON.stringify(prekey.prekey)])
         })
     })
@@ -90,10 +90,10 @@ app.get("/login", function(req, res) {
 // })
 
 app.get("/register", function(req, res) {
-    if(req.cookies.id){
-        res.redirect("/");
-        return
-    }
+    // if(req.cookies.id){
+    //     res.redirect("/");
+    //     return
+    // }
     res.render("register");
 })
 
@@ -128,6 +128,18 @@ app.get("/logout", function(req, res) {
 app.post("/searchuser", async function(req, res) {
     const usersLikeQuery = await pool.query("SELECT id, username FROM users WHERE username like $1", [`%${req.body.query}%`]);
     res.send(usersLikeQuery.rows);
+})
+
+app.post("/fetchbundle", async function(req, res) {
+    //verify request is from a user
+    const authToken = req.cookies.authToken;
+    const verifyAuthTokenQuery = await pool.query('SELECT 1 FROM users WHERE authtoken = $1', [authToken]);
+    if(verifyAuthTokenQuery.rows.length == 0){
+        res.status(403).send("NOCOOKIE")
+        return;
+    }
+    const bundleQuery = await pool.query("SELECT users.id, users.identityPublicKey, users.prekey, users.signedPrekey, prekey.onetimeprekey, prekey.keyno from users join prekey on prekey.userid = users.id where users.username = $1 limit 1", [req.body.username])
+    res.send(JSON.stringify(bundleQuery.rows[0]));
 })
 
 app.use(express.static('./public'));

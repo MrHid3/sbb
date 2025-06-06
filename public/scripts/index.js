@@ -63,6 +63,30 @@ searchUserInput.addEventListener('input', async (e) => {
 //diffie-hellman x3d
 searchUserForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const friend = e.target.user.value;
+    //get prekey bundle from server
+    const awaitBundle = await fetch("/fetchbundle", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: friend
+        })
+    })
+    const bundle = await awaitBundle.json();
+    console.log(bundle);
+    const IPK = JSON.parse(bundle.identitypublickey);
+    const SPK = JSON.parse(bundle.prekey);
+    const signature = JSON.parse(bundle.signedprekey);
+    const PK = JSON.parse(bundle.prekey);
+    const keyno = bundle.keyno;
+    console.log(IPK, signature, SPK)
+    const verifyIdentity = await algs.verifySignature(IPK, signature, SPK);
+    if(!verifyIdentity){
+        console.log("Wrong signature");
+        return;
+    }
 
 })
 

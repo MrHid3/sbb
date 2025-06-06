@@ -8,7 +8,7 @@ class algs{
                 namedCurve: "P-384",
             },
             true,
-            ["sign", "verify"],
+            ["sign", "verify", "deriveKey", "deriveBits"],
         );
         //export private and public keys
         const identityPrivateKey = await crypto.subtle.exportKey("jwk", identityKeyPair.privateKey);

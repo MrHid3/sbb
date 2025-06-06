@@ -97,7 +97,6 @@ class algs{
                 textEncoded
             )
         }
-
     }
 }
 
