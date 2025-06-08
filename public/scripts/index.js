@@ -16,7 +16,6 @@ const privateKey = JSON.parse(localStorage.getItem('privateKey'));
 const signedKey = JSON.parse(localStorage.getItem('signedKey'));
 const username = JSON.parse(localStorage.getItem('username'));
 
-
 // form.addEventListener('submit', (e) => {
 //     e.preventDefault();
 //     if (input.value) {
@@ -75,19 +74,20 @@ searchUserForm.addEventListener('submit', async (e) => {
         })
     })
     const bundle = await awaitBundle.json();
-    console.log(bundle);
     const IPK = JSON.parse(bundle.identitypublickey);
     const SPK = JSON.parse(bundle.prekey);
     const signature = JSON.parse(bundle.signedprekey);
     const PK = JSON.parse(bundle.prekey);
     const keyno = bundle.keyno;
-    console.log(IPK, signature, SPK)
     const verifyIdentity = await algs.verifySignature(IPK, signature, SPK);
     if(!verifyIdentity){
         console.log("Wrong signature");
         return;
     }
-
+    const [ ephemeralPublicKey, ephemeralPrivateKey] = await algs.generateX25519Keypair();
+    console.log(SPK, publicKey)
+    const [dh1, dh2, dh3] = await algs.x3DH(privateKey, ephemeralPrivateKey, IPK, SPK, PK);
+    console.log(DH1);
 })
 
 //provide prekeys if requested by server
@@ -103,7 +103,7 @@ socket.on('askForPreKeys', async (data) => {
         keyno = preKeys.length;
     }
     for(let i = 0; i < data.amount; i++) {
-        const [publicPreKey, privatePreKey, _] = await algs.generateECDSAKeypair();
+        const [publicPreKey, privatePreKey, _] = await algs.generateX25519Keypair();
         preKeys.push({prekey: privatePreKey, keyno: keyno + i});
         publicPreKeys.push({prekey: publicPreKey, keyno: keyno + i});
     }

@@ -1,50 +1,61 @@
 class algs{
     //generate ECDSA keys, save them to locastorage, leave textToSign emtpy no sign the public key
-    static async generateECDSAKeypair(provideSignature = false, textToSign = ""){
+    static async generateECDSAKeypair(){
         //generate keypair
-        const identityKeyPair = await crypto.subtle.generateKey(
+        const keyPair = await crypto.subtle.generateKey(
             {
-                name: "ECDSA",
-                namedCurve: "P-384",
+                name: "Ed25519"
             },
             true,
             ["sign", "verify"],
         );
         //export private and public keys
-        const identityPrivateKey = await crypto.subtle.exportKey("jwk", identityKeyPair.privateKey);
-        const identityPublicKey = await crypto.subtle.exportKey("jwk", identityKeyPair.publicKey);
-        //create signed key and
-        let signedText;
-        let identitySignedKeyString;
-        const identityPublicKeyEncoded = new TextEncoder().encode(JSON.stringify(identityPublicKey));
-        if(provideSignature) {
-            if (textToSign == ""){
-                signedText = await crypto.subtle.sign(
-                    {
-                        name: "ECDSA",
-                        namedCurve: "P-384",
-                        hash: "SHA-256"
-                    },
-                    identityKeyPair.privateKey,
-                    identityPublicKeyEncoded
-                );
-            }else{
-                const textToSignEncoded = new TextEncoder().encode(JSON.stringify(textToSign));
-                signedText = await crypto.subtle.sign(
-                    {
-                        name: "ECDSA",
-                        namedCurve: "P-384",
-                        hash: "SHA-256"
-                    },
-                    identityKeyPair.privateKey,
-                    textToSignEncoded
-                );
-            }
-            const identitySignedKeyArray = Array.from(new Uint8Array(signedText))
-            identitySignedKeyString = btoa(String.fromCharCode.apply(null, identitySignedKeyArray));
-        }
+        const privateKey = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
+        const publicKey = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
         //return the keys
-        return [identityPublicKey, identityPrivateKey, identitySignedKeyString]
+        return [publicKey, privateKey]
+    }
+
+    static async generateX25519Keypair(){
+        try{
+            //generate keypair
+            const keyPair = await crypto.subtle.generateKey(
+                {
+                    name: "X25519",
+                },
+                true,
+                ["deriveBits"],
+            );
+            //export the keys and return to user
+            const privateKey = await  crypto.subtle.exportKey("jwk", keyPair.privateKey);
+            const publicKey = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
+            return [publicKey, privateKey];
+        }catch(err){
+            alert("Browser unsupported! Try firefox or chromium")
+        }
+    }
+
+    static async sign(textToSign, key){
+        //import the public key so it can be used to sign
+        const keyImported = await crypto.subtle.importKey(
+            "jwk",
+            key,
+            {
+                name: "Ed25519"
+            },
+            true,
+            ["sign"]
+        );
+        const thingToSign = new TextEncoder().encode(JSON.stringify(textToSign));
+        const signedText = await crypto.subtle.sign(
+            {
+                name: "Ed25519"
+            },
+            keyImported,
+            thingToSign
+        )
+        const signatureArray = Array.from(new Uint8Array(signedText))
+        return btoa(String.fromCharCode.apply(null, signatureArray));
     }
 
 //convert sendable/storable signature to one that can be verified
@@ -57,46 +68,61 @@ class algs{
         return uint8Array.buffer;
     }
 
-    static async verifySignature(publicKey, signature, signedText = "") {
+    static async verifySignature(key, signature, signedText) {
         //import the public key so it can be used to verify
-        const publicKeyParsed = publicKey;
-        const publicKeyImported = await crypto.subtle.importKey(
+        const keyImported = await crypto.subtle.importKey(
             "jwk",
-            publicKeyParsed,
+            key,
             {
-                name: "ECDSA",
-                namedCurve: "P-384",
-                hash: "SHA-256"
+                name: "Ed25519"
             },
             true,
             ["verify"]
         );
         //verify user's signature
-        if(signedText == ""){
-            const publicKeyEncoded = new TextEncoder().encode(JSON.stringify(publicKey));
-            return await crypto.subtle.verify(
-                {
-                    name: "ECDSA",
-                    namedCurve: "P-384",
-                    hash: "SHA-256"
-                },
-                publicKeyImported,
-                algs.base64ToArrayBuffer(signature),
-                publicKeyEncoded
-            )
-        }else{
-            const textEncoded = new TextEncoder().encode(JSON.stringify(signedText));
-            return await crypto.subtle.verify(
-                {
-                    name: "ECDSA",
-                    namedCurve: "P-384",
-                    hash: "SHA-256"
-                },
-                publicKeyImported,
-                algs.base64ToArrayBuffer(signature),
-                textEncoded
-            )
-        }
+        const textEncoded = new TextEncoder().encode(JSON.stringify(signedText));
+        return await crypto.subtle.verify(
+            {
+                name: "Ed25519"
+            },
+            keyImported,
+            algs.base64ToArrayBuffer(signature),
+            textEncoded
+        )
+    }
+
+    static async x3DH(myIdentityPrivate, myEphemeralPrivate, theirIdentityPublic, theirSigned, theirOneTime) {
+        const IPK = ed2curve(theirIdentityPublic);
+        const mIPK = ed2curve(myIdentityPrivate);
+
+        const dh1 = await window.crypto.subtle.deriveBits(
+            {
+                name: "X25519",
+                public: theirSigned,
+            },
+            mIPK,
+            256
+        );
+
+        const dh2 = await window.crypto.subtle.deriveBits(
+            {
+                name: "X25519",
+                public: IPK,
+            },
+            myEphemeralPrivate,
+            256
+        );
+
+        const dh3 = await window.crypto.subtle.deriveBits(
+            {
+                name: "ECDH",
+                public: theirSigned
+            },
+            myEphemeralPrivate,
+            256
+        );
+
+        return [dh1, dh2, dh3];
     }
 }
 

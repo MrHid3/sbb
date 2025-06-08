@@ -4,8 +4,7 @@ class algs{
         //generate keypair
         const identityKeyPair = await crypto.subtle.generateKey(
             {
-                name: "ECDSA",
-                namedCurve: "P-384",
+                name: "Ed25519"
             },
             true,
             ["sign", "verify", "deriveKey", "deriveBits"],
@@ -14,36 +13,26 @@ class algs{
         const identityPrivateKey = await crypto.subtle.exportKey("jwk", identityKeyPair.privateKey);
         const identityPublicKey = await crypto.subtle.exportKey("jwk", identityKeyPair.publicKey);
         //create signed key and
+        let thingToSign;
         let signedText;
-        const identityPublicKeyEncoded = new TextEncoder().encode(JSON.stringify(identityPublicKey));
+        let identitySignedKeyString;
         if(provideSignature) {
             if (textToSign == ""){
-                signedText = await crypto.subtle.sign(
-                    {
-                        name: "ECDSA",
-                        namedCurve: "P-384",
-                        hash: "SHA-256"
-                    },
-                    identityKeyPair.privateKey,
-                    identityPublicKeyEncoded
-                );
-            }else{
-                const textToSignEncoded = new TextEncoder().encode(JSON.stringify(textToSign));
-                signedText = await crypto.subtle.sign(
-                    {
-                        name: "ECDSA",
-                        namedCurve: "P-384",
-                        hash: "SHA-256"
-                    },
-                    identityKeyPair.privateKey,
-                    textToSignEncoded
-                );
+                thingToSign = new TextEncoder().encode(JSON.stringify(identityPublicKey));
+            }else {
+                thingToSign = new TextEncoder().encode(JSON.stringify(textToSign));
             }
+            signedText = await crypto.subtle.sign(
+                {
+                    name: "Ed25519"
+                },
+                identityKeyPair.privateKey,
+            )
             const identitySignedKeyArray = Array.from(new Uint8Array(signedText))
-            const identitySignedKeyString = btoa(String.fromCharCode.apply(null, identitySignedKeyArray));
+            identitySignedKeyString = btoa(String.fromCharCode.apply(null, identitySignedKeyArray));
         }
         //return the keys
-        return [identityPublicKey, identityPrivateKey, signedText]
+        return [identityPublicKey, identityPrivateKey, identitySignedKeyString]
     }
 
 //convert sendable/storable signature to one that can be verified
@@ -56,46 +45,27 @@ class algs{
         return uint8Array.buffer;
     }
 
-    static async verifySignature(publicKey, signature, signedText = "") {
+    static async verifySignature(key, signature, signedText) {
         //import the public key so it can be used to verify
-        const publicKeyParsed = publicKey;
-        const publicKeyImported = await crypto.subtle.importKey(
+        const keyImported = await crypto.subtle.importKey(
             "jwk",
-            publicKeyParsed,
+            key,
             {
-                name: "ECDSA",
-                namedCurve: "P-384",
-                hash: "SHA-256"
+                name: "Ed25519"
             },
             true,
             ["verify"]
         );
         //verify user's signature
-        if(signedText == ""){
-            const publicKeyEncoded = new TextEncoder().encode(JSON.stringify(publicKey));
-            return await crypto.subtle.verify(
-                {
-                    name: "ECDSA",
-                    namedCurve: "P-384",
-                    hash: "SHA-256"
-                },
-                publicKeyImported,
-                algs.base64ToArrayBuffer(signature),
-                publicKeyEncoded
-            )
-        }else{
-            const textEncoded = new TextEncoder().encode(JSON.stringify(signedText));
-            return await crypto.subtle.verify(
-                {
-                    name: "ECDSA",
-                    namedCurve: "P-384",
-                    hash: "SHA-256"
-                },
-                publicKeyImported,
-                algs.base64ToArrayBuffer(signature),
-                textEncoded
-            )
-        }
+        const textEncoded = new TextEncoder().encode(JSON.stringify(signedText));
+        return await crypto.subtle.verify(
+            {
+                name: "Ed25519"
+            },
+            keyImported,
+            algs.base64ToArrayBuffer(signature),
+            textEncoded
+        )
     }
 }
 

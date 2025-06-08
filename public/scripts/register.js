@@ -1,13 +1,12 @@
 import algs from './algs.js'
-
 //register user
 document.querySelector('form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const username = document.querySelector('input[name="username"]').value;
     //create public and private keys and prekeys, sign the public prekey
-    const [publicPrekey, privatePrekey] = await algs.generateECDSAKeypair();
-    const [identityPublicKey, identityPrivateKey, signedPrekey] = await algs.generateECDSAKeypair(true, publicPrekey);
-    console.log(publicPrekey);
+    const [publicPrekey, privatePrekey] = await algs.generateX25519Keypair();
+    const [identityPublicKey, identityPrivateKey] = await algs.generateECDSAKeypair(true, publicPrekey);
+    const signedPrekey = await algs.sign(publicPrekey, identityPrivateKey);
     const res = await fetch('register', {
         method: 'POST',
         headers: {
