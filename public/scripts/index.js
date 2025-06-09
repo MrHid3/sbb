@@ -74,20 +74,30 @@ searchUserForm.addEventListener('submit', async (e) => {
         })
     })
     const bundle = await awaitBundle.json();
-    const IPK = JSON.parse(bundle.identitypublickey);
-    const SPK = JSON.parse(bundle.prekey);
+    console.log(bundle);
+    const identityPublicKey = JSON.parse(bundle.identitypublickey);
+    const signedPrekey = JSON.parse(bundle.prekey);
     const signature = JSON.parse(bundle.signedprekey);
-    const PK = JSON.parse(bundle.prekey);
+    const preKey = JSON.parse(bundle.prekey);
+    const X22519key = JSON.parse(bundle.identityx25519);
+    const X22519signature = JSON.parse(bundle.identityx25519signature);
     const keyno = bundle.keyno;
-    const verifyIdentity = await algs.verifySignature(IPK, signature, SPK);
-    if(!verifyIdentity){
+    const verifyIdentity = await algs.verifySignature(identityPublicKey, signature, preKey);
+    const verifyX25519 = await algs.verifySignature(identityPublicKey, X22519signature, X22519key);
+    if(!verifyIdentity || !verifyX25519){
         console.log("Wrong signature");
         return;
     }
-    const [ ephemeralPublicKey, ephemeralPrivateKey] = await algs.generateX25519Keypair();
-    console.log(SPK, publicKey)
-    const [dh1, dh2, dh3] = await algs.x3DH(privateKey, ephemeralPrivateKey, IPK, SPK, PK);
-    console.log(DH1);
+    const ephemeralPair = await algs.generateX25519Keypair();
+    const DH1 = await crypto.subtle.deriveBits(
+        {
+            name: "X22519",
+            public: identityPublicKey
+        },
+        ephemeralPair.privateKey,
+        256
+    )
+    console.log(DH1)
 })
 
 //provide prekeys if requested by server

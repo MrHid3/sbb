@@ -104,15 +104,16 @@ app.post("/register", async function(req, res) {
         res.status(400).send("USERNAMETAKEN");
         return;
     }
-    const checkSignature = await algs.verifySignature(JSON.parse(req.body.identityPublicKey), JSON.parse(req.body.prekeySignature), JSON.parse(req.body.publicPrekey))
+    const checkSignature = await algs.verifySignature(JSON.parse(req.body.identityPublicKey), JSON.parse(req.body.prekeySignature), JSON.parse(req.body.publicPrekey));
+    const check2Signature = await algs.verifySignature(JSON.parse(req.body.identityPublicKey), JSON.parse(req.body.identityX25519signature), JSON.parse(req.body.identityX25519Public));
     //if signature is valid register the user
-    if(!checkSignature){
+    if(!checkSignature || !check2Signature){
         res.status(400).send("WRONGSIGNATURE")
         return;
     }
     const authToken = jwt.sign({ username: req.body.username }, 'r$%Es^$F89h)hb(Y*fR^S4#%W4R68g(Oig');
-    await pool.query("INSERT INTO users(username, identityPublicKey, prekey, signedprekey, authToken) values($1, $2, $3, $4, $5)",
-        [req.body.username, req.body.identityPublicKey, req.body.publicPrekey, req.body.prekeySignature, authToken]);
+    await pool.query("INSERT INTO users(username, identityPublicKey, prekey, signedprekey, authToken, identityx25519, identityx25519signature) values($1, $2, $3, $4, $5, $6, $7)",
+        [req.body.username, req.body.identityPublicKey, req.body.publicPrekey, req.body.prekeySignature, authToken, req.body.identityX25519Public, req.body.identityX25519signature]);
     res.cookie('authToken', authToken,{
         httpOnly: true,
         secure: true,
@@ -138,7 +139,7 @@ app.post("/fetchbundle", async function(req, res) {
         res.status(403).send("NOCOOKIE")
         return;
     }
-    const bundleQuery = await pool.query("SELECT users.id, users.identityPublicKey, users.prekey, users.signedPrekey, prekey.onetimeprekey, prekey.keyno from users join prekey on prekey.userid = users.id where users.username = $1 limit 1", [req.body.username])
+    const bundleQuery = await pool.query("SELECT users.id, users.identityPublicKey, users.prekey, users.signedPrekey, users.identityx25519, users.identityx25519signature, prekey.onetimeprekey, prekey.keyno from users join prekey on prekey.userid = users.id where users.username = $1 limit 1", [req.body.username])
     res.send(JSON.stringify(bundleQuery.rows[0]));
 })
 

@@ -1,6 +1,7 @@
+import { ed25519 } from 'https://esm.sh/@noble/curves@1.2.0/ed25519';
 class algs{
     //generate ECDSA keys, save them to locastorage, leave textToSign emtpy no sign the public key
-    static async generateECDSAKeypair(){
+    static async generateEd25519Keypair(){
         //generate keypair
         const keyPair = await crypto.subtle.generateKey(
             {
@@ -89,40 +90,6 @@ class algs{
             algs.base64ToArrayBuffer(signature),
             textEncoded
         )
-    }
-
-    static async x3DH(myIdentityPrivate, myEphemeralPrivate, theirIdentityPublic, theirSigned, theirOneTime) {
-        const IPK = ed2curve(theirIdentityPublic);
-        const mIPK = ed2curve(myIdentityPrivate);
-
-        const dh1 = await window.crypto.subtle.deriveBits(
-            {
-                name: "X25519",
-                public: theirSigned,
-            },
-            mIPK,
-            256
-        );
-
-        const dh2 = await window.crypto.subtle.deriveBits(
-            {
-                name: "X25519",
-                public: IPK,
-            },
-            myEphemeralPrivate,
-            256
-        );
-
-        const dh3 = await window.crypto.subtle.deriveBits(
-            {
-                name: "ECDH",
-                public: theirSigned
-            },
-            myEphemeralPrivate,
-            256
-        );
-
-        return [dh1, dh2, dh3];
     }
 }
 

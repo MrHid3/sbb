@@ -5,8 +5,10 @@ document.querySelector('form').addEventListener('submit', async function(e) {
     const username = document.querySelector('input[name="username"]').value;
     //create public and private keys and prekeys, sign the public prekey
     const [publicPrekey, privatePrekey] = await algs.generateX25519Keypair();
-    const [identityPublicKey, identityPrivateKey] = await algs.generateECDSAKeypair(true, publicPrekey);
+    const [identityPublicKey, identityPrivateKey] = await algs.generateEd25519Keypair();
+    const [identityX25519Private, identityX25519Public] = await algs.generateX25519Keypair();
     const signedPrekey = await algs.sign(publicPrekey, identityPrivateKey);
+    const signedX25519 = await algs.sign(identityX25519Public, identityPrivateKey);
     const res = await fetch('register', {
         method: 'POST',
         headers: {
@@ -17,6 +19,8 @@ document.querySelector('form').addEventListener('submit', async function(e) {
             identityPublicKey: JSON.stringify(identityPublicKey),
             publicPrekey: JSON.stringify(publicPrekey),
             prekeySignature: JSON.stringify(signedPrekey),
+            identityX25519Public: JSON.stringify(identityX25519Public),
+            identityX25519signature: JSON.stringify(signedX25519)
         })
     })
     const text = await res.text()
@@ -30,6 +34,7 @@ document.querySelector('form').addEventListener('submit', async function(e) {
         localStorage.setItem('publicKey', JSON.stringify(identityPublicKey));
         localStorage.setItem('privateKey', JSON.stringify(identityPrivateKey));
         localStorage.setItem('privatePrekey', JSON.stringify(privatePrekey));
+        localStorage.setItem('identityX25519Private', JSON.stringify(identityX25519Private));
         window.location.href = "/";
     }
 })
