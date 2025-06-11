@@ -91,6 +91,84 @@ class algs{
             textEncoded
         )
     }
+
+    static async X3DH(myIdentityPrivate, myEphemeralPrivate, theirIdentityPublic, theirPrekeyPublic, theirOneTimePublic){
+        const mIPK = await crypto.subtle.importKey(
+            "jwk",
+            myIdentityPrivate,
+            {name: "X25519"},
+            true,
+            ["deriveBits"]
+        )
+        const mEK = await crypto.subtle.importKey(
+            "jwk",
+            myEphemeralPrivate,
+            { name: "X25519" },
+            true,
+            ["deriveBits"]
+        );
+        const tIPK = await crypto.subtle.importKey(
+            "jwk",
+            theirIdentityPublic,
+            { name: "X25519" },
+            true,
+            [] //this must be empty (cryptography bullshit)
+        );
+        const tSPK = await crypto.subtle.importKey(
+            "jwk",
+            theirPrekeyPublic,
+            { name: "X25519" },
+            true,
+            [] //this must be empty (cryptography bullshit)
+        )
+        let tOTK
+        if(theirOneTimePublic){
+            tOTK = await crypto.subtle.importKey(
+                "jwk",
+                theirOneTimePublic,
+                { name: "X25519" },
+                true,
+                []
+            )
+        }
+
+        const DH1 = await crypto.subtle.deriveBits(
+            {
+                name: "X25519",
+                public: tSPK
+            },
+            mIPK,
+            256
+        );
+        const DH2 = await crypto.subtle.deriveBits(
+            {
+                name: "X25519",
+                public: tIPK
+            },
+            mEK,
+            256
+        );
+        const DH3 = await crypto.subtle.deriveBits(
+            {
+                name: "X25519",
+                public: tSPK
+            },
+            mEK,
+            256
+        );
+        let DH4 = null;
+        if(theirOneTimePublic){
+            DH4 = await crypto.subtle.deriveBits(
+                {
+                    name: "X25519",
+                    public: tOTK
+                },
+                mEK,
+                256
+            );
+        }
+
+    }
 }
 
 export default algs;

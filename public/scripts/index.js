@@ -15,6 +15,7 @@ const publicKey = JSON.parse(localStorage.getItem('publicKey'));
 const privateKey = JSON.parse(localStorage.getItem('privateKey'));
 const signedKey = JSON.parse(localStorage.getItem('signedKey'));
 const username = JSON.parse(localStorage.getItem('username'));
+const myX22519 = JSON.parse(localStorage.getItem('identityX25519Private'));
 
 // form.addEventListener('submit', (e) => {
 //     e.preventDefault();
@@ -81,23 +82,18 @@ searchUserForm.addEventListener('submit', async (e) => {
     const preKey = JSON.parse(bundle.prekey);
     const X22519key = JSON.parse(bundle.identityx25519);
     const X22519signature = JSON.parse(bundle.identityx25519signature);
+    const oneTimePrekey = JSON.parse(bundle.onetimeprekey)
     const keyno = bundle.keyno;
     const verifyIdentity = await algs.verifySignature(identityPublicKey, signature, preKey);
     const verifyX25519 = await algs.verifySignature(identityPublicKey, X22519signature, X22519key);
+    let sharedSecret;
+    const [publicEphemeralKey, privateEphemeralKey] = await algs.generateX25519Keypair();
     if(!verifyIdentity || !verifyX25519){
         console.log("Wrong signature");
         return;
     }
-    const ephemeralPair = await algs.generateX25519Keypair();
-    const DH1 = await crypto.subtle.deriveBits(
-        {
-            name: "X22519",
-            public: identityPublicKey
-        },
-        ephemeralPair.privateKey,
-        256
-    )
-    console.log(DH1)
+    sharedSecret = await algs.X3DH(myX22519, privateEphemeralKey, X22519key, preKey, oneTimePrekey);
+
 })
 
 //provide prekeys if requested by server

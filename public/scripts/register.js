@@ -6,7 +6,7 @@ document.querySelector('form').addEventListener('submit', async function(e) {
     //create public and private keys and prekeys, sign the public prekey
     const [publicPrekey, privatePrekey] = await algs.generateX25519Keypair();
     const [identityPublicKey, identityPrivateKey] = await algs.generateEd25519Keypair();
-    const [identityX25519Private, identityX25519Public] = await algs.generateX25519Keypair();
+    const [identityX25519Public, identityX25519Private] = await algs.generateX25519Keypair();
     const signedPrekey = await algs.sign(publicPrekey, identityPrivateKey);
     const signedX25519 = await algs.sign(identityX25519Public, identityPrivateKey);
     const res = await fetch('register', {

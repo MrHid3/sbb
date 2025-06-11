@@ -139,7 +139,11 @@ app.post("/fetchbundle", async function(req, res) {
         res.status(403).send("NOCOOKIE")
         return;
     }
-    const bundleQuery = await pool.query("SELECT users.id, users.identityPublicKey, users.prekey, users.signedPrekey, users.identityx25519, users.identityx25519signature, prekey.onetimeprekey, prekey.keyno from users join prekey on prekey.userid = users.id where users.username = $1 limit 1", [req.body.username])
+    const bundleQuery = await pool.query("SELECT users.id, users.identityPublicKey, users.prekey, users.signedPrekey, users.identityx25519, users.identityx25519signature, prekey.onetimeprekey, prekey.keyno from users left join prekey on prekey.userid = users.id where users.username = $1 limit 1", [req.body.username])
+    //delete prekey from database, off for testing
+    // if(bundleQuery.rows[0].onetimeprekey){
+    //     await pool.query("DELETE FROM prekey WHERE onetimeprekey = $1", [bundleQuery.rows[0].onetimeprekey])
+    // }
     res.send(JSON.stringify(bundleQuery.rows[0]));
 })
 
