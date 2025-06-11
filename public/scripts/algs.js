@@ -167,7 +167,32 @@ class algs{
                 256
             );
         }
+        //combine the fuckers
+        const combinedSecrets = new Uint8Array([
+            ...new Uint8Array(DH1),
+            ...new Uint8Array(DH2),
+            ...new Uint8Array(DH3),
+            ...new Uint8Array(DH4)
+        ]);
+        //some cryptography magic
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw',
+            combinedSecrets,
+            { name: 'HKDF' },
+            false,
+            ['deriveBits']
+        );
 
+        return await crypto.subtle.deriveBits(
+            {
+                name: 'HKDF',
+                salt: new Uint8Array(0),
+                info: new Uint8Array(0),
+                hash: 'SHA-256'
+            },
+            keyMaterial,
+            256
+        );
     }
 }
 

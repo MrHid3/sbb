@@ -93,7 +93,7 @@ searchUserForm.addEventListener('submit', async (e) => {
         return;
     }
     sharedSecret = await algs.X3DH(myX22519, privateEphemeralKey, X22519key, preKey, oneTimePrekey);
-
+    const AD = [...new TextEncoder().encode(myX22519), ...new TextEncoder().encode(X22519key)]
 })
 
 //provide prekeys if requested by server
