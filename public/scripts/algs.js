@@ -32,7 +32,7 @@ class algs{
             const publicKey = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
             return [publicKey, privateKey];
         }catch(err){
-            alert("Browser unsupported! Try firefox or chromium")
+            alert("Browser not supported! Try firefox or chromium")
         }
     }
 
@@ -122,7 +122,7 @@ class algs{
             [] //this must be empty (cryptography bullshit)
         )
         let tOTK
-        if(theirOneTimePublic){
+        if(theirOneTimePublic != null){
             tOTK = await crypto.subtle.importKey(
                 "jwk",
                 theirOneTimePublic,
@@ -168,12 +168,22 @@ class algs{
             );
         }
         //combine the fuckers
-        const combinedSecrets = new Uint8Array([
-            ...new Uint8Array(DH1),
-            ...new Uint8Array(DH2),
-            ...new Uint8Array(DH3),
-            ...new Uint8Array(DH4)
-        ]);
+        let combinedSecrets
+        if(theirOneTimePublic != null){
+            combinedSecrets = new Uint8Array([
+                ...new Uint8Array(DH1),
+                ...new Uint8Array(DH2),
+                ...new Uint8Array(DH3),
+                ...new Uint8Array(DH4)
+            ]);
+        }else{
+            combinedSecrets = new Uint8Array([
+                ...new Uint8Array(DH1),
+                ...new Uint8Array(DH2),
+                ...new Uint8Array(DH3)
+            ]);
+        }
+
         //some cryptography magic
         const keyMaterial = await crypto.subtle.importKey(
             'raw',

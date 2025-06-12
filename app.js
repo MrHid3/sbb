@@ -25,7 +25,32 @@ app.use(express.static(path.join(__dirname, 'public')));
 // }))
 
 //prepare databases
+pool.query('CREATE table IF NOT EXISTS users(' +
+    'id serial,' +
+    'username varchar unique,' +
+    'secret varchar,' +
+    'identitypublickey varchar,' +
+    'identityx25519 varchar,' +
+    'identityx25519signature varchar,' +
+    'signedprekey varchar,' +
+    'prekeySignature varchar,' +
+    'authtoken varchar)')
+pool.query('CREATE table IF NOT EXISTS prekey(' +
+    'id serial,' +
+    'userid integer,' +
+    'keyno integer,' +
+    'onetimeprekey varchar)')
+pool.query('CREATE table IF NOT EXISTS live(' +
+    'userid integer,' +
+    'socket varchar)')
+pool.query('CREATE table IF NOT EXISTS message(' +
+    'id serial,' +
+    'senderid integer,' +
+    'receiverid integer,' +
+    'type varchar,' +
+    'message varchar)')
 pool.query('truncate live')
+
 
 io.on('connection', async (socket) => {
     //verify user's authtoken
@@ -36,7 +61,16 @@ io.on('connection', async (socket) => {
     if(verifyAuthTokenQuery.rows.length == 0) {
         socket.disconnect();
     }else{
-        const addToSocketListQuery = await pool.query('INSERT into live(userid, socket) values($1, $2)', [verifyAuthTokenQuery.rows[0].id, socket.id])
+        //add user to live table
+        await pool.query('INSERT into live(userid, socket) values($1, $2)', [verifyAuthTokenQuery.rows[0].id, socket.id])
+    }
+    //check if user has pending messages
+    const checkForMessagesQuery = await pool.query("SELECT message.senderID, message.type, message.message, message.id FROM message JOIN live ON live.userid = message.receiverID WHERE live.socket = $1", [socket.id]);
+    if(checkForMessagesQuery.rows.length > 0) {
+        checkForMessagesQuery.rows.forEach(async(row) => {
+            io.to(socket.id).volatile.emit("message", {sender: row.senderid, type: row.type, message: row.message});
+            await pool.query("DELETE FROM message WHERE id = $1", [row.id]);
+        })
     }
 
     //check if user has 4 prekeys on the server
@@ -56,11 +90,18 @@ io.on('connection', async (socket) => {
     })
 
     socket.on('message', async(data) => {
-        let socketID = idToSocket(data.sendTo);
-        if(socketID){
-            const senderId= socketToId(socket.id);
-            io.to(socketID).emit('message', {name: senderId, message: data.message});
-            await pool.query("INSERT INTO MESSAGES(senderId, receiverId, message) values($1, $2, $3)", [senderId, data.sendTo, data.message])
+        //check if user is online
+        const senderIDQuery = await pool.query("SELECT userid FROM live WHERE socket = $1", [socket.id])
+        const isReceiverOnlineQuery = await pool.query("SELECT socket FROM live WHERE userid = $1", [data.sendTo]);
+        //check user isn't sending to himself
+        if(senderIDQuery.rows[0].userid == data.sendTo)
+            return;
+        //if online, send straight to him
+        if(isReceiverOnlineQuery.rows[0] != null){
+            io.to(isReceiverOnlineQuery.rows[0].socket).emit("message", {sender: senderIDQuery.rows[0].userid, type: data.type, message: JSON.stringify(data.message)});
+        }else{
+            //if not, store in database
+            await pool.query("INSERT INTO message(senderID, receiverID, type, message) values($1, $2, $3, $4)", [senderIDQuery.rows[0].userid, data.sendTo, data.type, data.message])
         }
     })
 
@@ -112,7 +153,7 @@ app.post("/register", async function(req, res) {
         return;
     }
     const authToken = jwt.sign({ username: req.body.username }, 'r$%Es^$F89h)hb(Y*fR^S4#%W4R68g(Oig');
-    await pool.query("INSERT INTO users(username, identityPublicKey, prekey, signedprekey, authToken, identityx25519, identityx25519signature) values($1, $2, $3, $4, $5, $6, $7)",
+    await pool.query("INSERT INTO users(username, identityPublicKey, signedprekey, prekeySignature, authToken, identityx25519, identityx25519signature) values($1, $2, $3, $4, $5, $6, $7)",
         [req.body.username, req.body.identityPublicKey, req.body.publicPrekey, req.body.prekeySignature, authToken, req.body.identityX25519Public, req.body.identityX25519signature]);
     res.cookie('authToken', authToken,{
         httpOnly: true,
@@ -139,11 +180,11 @@ app.post("/fetchbundle", async function(req, res) {
         res.status(403).send("NOCOOKIE")
         return;
     }
-    const bundleQuery = await pool.query("SELECT users.id, users.identityPublicKey, users.prekey, users.signedPrekey, users.identityx25519, users.identityx25519signature, prekey.onetimeprekey, prekey.keyno from users left join prekey on prekey.userid = users.id where users.username = $1 limit 1", [req.body.username])
+    const bundleQuery = await pool.query("SELECT users.id, users.identityPublicKey, users.username, users.signedprekey, users.prekeysignature, users.identityx25519, users.identityx25519signature, prekey.onetimeprekey, prekey.keyno, prekey.id as prekeyid from users left join prekey on prekey.userid = users.id where users.username = $1 limit 1", [req.body.username]);
     //delete prekey from database, off for testing
-    // if(bundleQuery.rows[0].onetimeprekey){
-    //     await pool.query("DELETE FROM prekey WHERE onetimeprekey = $1", [bundleQuery.rows[0].onetimeprekey])
-    // }
+    if(bundleQuery.rows[0].onetimeprekey){
+        await pool.query("DELETE FROM prekey WHERE id = $1", [bundleQuery.rows[0].prekeyid])
+    }
     res.send(JSON.stringify(bundleQuery.rows[0]));
 })
 
