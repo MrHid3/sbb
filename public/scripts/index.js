@@ -1,7 +1,7 @@
 import algs from "./algs.js"
 
 //for debugg
-// localStorage.setItem("friends", [])
+localStorage.setItem("friends", [])
 
 const socket = io({
     withCredentials: true //send cookies
@@ -17,10 +17,9 @@ const sendTo = document.getElementById('sendTo');
 const publicKey = JSON.parse(localStorage.getItem('publicKey'));
 const privateKey = JSON.parse(localStorage.getItem('privateKey'));
 const publicPrekey = JSON.parse(localStorage.getItem('publicPrekey'));
-const signedKey = JSON.parse(localStorage.getItem('signedKey'));
+const privatePrekey = JSON.parse(localStorage.getItem('privatePrekey'));
 const username = JSON.parse(localStorage.getItem('username'));
 const myX22519 = JSON.parse(localStorage.getItem('identityX25519Private'));
-const myX22519public = JSON.parse(localStorage.getItem('identityX25519Public'));
 
 // form.addEventListener('submit', (e) => {
 //     e.preventDefault();
@@ -151,7 +150,7 @@ searchUserForm.addEventListener('submit', async (e) => {
     const exportedSecret = await crypto.subtle.exportKey("jwk", key)
     friends.push({id: bundle.id, username: bundle.username, secret: exportedSecret, messages: []});
     localStorage.setItem("friends", JSON.stringify(friends));
-    socket.emit("message", {type: "first", sendTo: bundle.id, message: {IKa: myX22519public, EKa: publicEphemeralKey, SPKa: publicPrekey, keyno: keyno, initial: result, iv: iv, AD: AD}})
+    socket.emit("message", {type: "first", sendTo: bundle.id, message: {IKa: myX22519, EKa: publicEphemeralKey, keyno: keyno, initial: result, iv: iv, AD: AD}})
 })
 
 //provide prekeys if requested by server
@@ -194,7 +193,7 @@ socket.on('message', async(data) => {
                 }
             }
         }
-        const sharedSecret = await algs.X3DH(myX22519, mOTK, message.IKa, message.SPKa, message.EKa);
+        const sharedSecret = await algs.X3DH2theX3DHing(myX22519, privatePrekey, mOTK, message.EKa, message.IKa);
         console.log(sharedSecret);
         const key = await crypto.subtle.importKey(
             'raw',
@@ -203,6 +202,7 @@ socket.on('message', async(data) => {
             true,
             ['decrypt']
         );
+        console.log(key);
         const ciphertext = await crypto.subtle.decrypt(
             {
                 name: 'AES-GCM',
