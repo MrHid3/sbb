@@ -60,11 +60,20 @@ The user has access to 3 screens:
 
 ## Actual functionality
 
-When a user registers on /register, they creates a pair of keys and a signature. The public key, signature gets sent to the server along with the username and a user account is created. In return, the user gets an authToken cookie, which lets them authorize without putting in their private key every time.
+When a user registers on /register, they create three pairs of keys: identity, identityX22519[*](#Notes), and prekey. The identityX22519 and prekey public keys are signed with the identiy private key, and then the identity public key, identiyX22519 public key, identiyX22519 signature, prekey public key and prekey signature get sent to the server. If everything goes trough on the server side (unique username, valid signatures) In return, the user gets an authToken cookie, which lets them authorize without putting in their private key every time.
 
 Login (TBI)
 
-Prekeys (TBI)
+When a user gets on / and connects to a socket, a multitude of checks are run:
+    - **does the user have an Authtoken**
+    > if not, disconnect the socket and redirect user to /register (TBI)
+    - **is the Authtoken valid**
+    > if not, disconnect the socket and redirect user to /register (TBI)
+    otherwise, add user to live table, so the socket can be easily linked back to a user
+    - **does the user have enough  prekeys in the database**
+    > if not, request prekeys from the user
+    - **does the user have any pending messages**
+    > if so, send them to the user
 
 ### TO-DO
 - [x] user creation
