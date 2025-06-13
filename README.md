@@ -1,4 +1,5 @@
 
+
 # What if Signal was bad?
 
 In time, this will hopefully become a clone of Signal.
@@ -75,6 +76,8 @@ When a user gets on / and connects to a socket, a multitude of checks are run:
 
 On /, the user can also add a friend (like specified [in the Signal documentation](#signal)[*](#note1)). They fetch a bundle from /fetchbundle ([Authtoken](#authtoken) is checked here, and if authorized the [one-time-prekey]("prekey") is deleted from the server) and based on it they perform triple Diffie-Hellman. They keep the secret and send  to the other user their ephemeral public key, their AD, their iv and their [identityX22519 key](#IX) (this is stored in table [message](#messageTable) as type "first"). When the user logs on, they get the option to accept the request (TBI), and if they do they perform a triple Diffie-Hellman on the provided values, and then tries to decode the first message. If everything goes well, a shared secret is established between the two.
 
+---
+
 ### TO-DO
 - [x] user creation
 - [ ] implement Diffie-Helman
@@ -93,14 +96,17 @@ by how likely/easy they are to be implemented (more or less)
 - [ ] someone is writing bubbles
 - [ ] group chats
 
-### MAYBE ONE DAY
+### Maybe One Day
 - [ ] voice calls
+
+---
 
 #### Notes
 
-<span id="note1">
-*This technically isn't the Signal Protocol. In the actual Signal, the identity is an XEd25519 curve (so one that can be used as X22519 and Ed25519 simultanously). This ensures the identities of both parties while generating the key. Here, I am yet to find a way do that in JS, so right now the user just sends an identity key ([identityPublicKey](#IPK) in users) and a separate X25519 key [identityX22519](#IX) in users), which they sign ([identityX2259signature](#IXS) in users).*
+<span id="note1">*This technically isn't the [Signal Protocol](#signal). In the actual Signal, the identity is an XEd25519 curve (so one that can be used as X22519 and Ed25519 simultanously). This ensures the identities of both parties while generating the key. Here, I am yet to find a way do that in JS, so right now the user just sends an identity key ([identityPublicKey](#IPK) in users) and a separate X25519 key [identityX22519](#IX) in users), which they sign ([identityX2259signature](#IXS) in users).*
 </span>
+
+---
 
 #### Sources
 
