@@ -1,3 +1,4 @@
+
 # What if Signal was bad?
 
 In time, this will hopefully become a clone of Signal.
@@ -66,14 +67,14 @@ Login (TBI)
 
 When a user gets on / and connects to a socket, a multitude of checks are run:
     - **does the user have an Authtoken**
-    > if not, disconnect the socket and redirect user to /register (TBI)
+	    *if not, disconnect the socket and redirect user to /register (TBI)*
     - **is the Authtoken valid**
-    > if not, disconnect the socket and redirect user to /register (TBI)
-    otherwise, add user to live table, so the socket can be easily linked back to a user
+	    *if not, disconnect the socket and redirect user to /register (TBI)*
+	    *otherwise, add user to live table, so the socket can be easily linked back to a user*
     - **does the user have enough  prekeys in the database**
-    > if not, request prekeys from the user
+	    *if not, request prekeys from the user*
     - **does the user have any pending messages**
-    > if so, send them to the user
+	    *if so, send them to the user*
 
 ### TO-DO
 - [x] user creation
