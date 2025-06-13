@@ -2,29 +2,61 @@
 
 In time, this will hopefully become a clone of Signal.
 
-## How ts works (specification I guess)
+## Table of contents
+1. [⬇️Installation](#Installation)
+2. [🏗️Structure](#How-ts-works-(structure))
+3. [🔧Functionality deep dive](#Actual-functionality)
+4. [🚀Further Development](#TO-DO)
+6. [📝Additional Notes](#Notes)
+
+## Installation
+Requirements:
+    - nodejs
+    - postgresql
+
+(with git installed)
+```
+git clone https:github.com/mrhid3/sbb
+cd sbb
+```
+(or just clone the repo and enter the directory)
+```
+npm i
+node app.js
+```
+
+## How ts works (structure)
 
 On the server side, there are 4 tables, containing:
 - users - table containing user information:
     - id - unique user identifier number,
     - username - unique user identifier,
-    - secret - things the user needs to store on the server (TBI),
-    - identityPublicKey - user's public key, used to create a shared secret (TBI),
-    - identitySignedKey - used to verify the user is in posession of the private key,
+    - secret - things the user needs to store on the server, encrypted (TBI),
+    - identityPublicKey - user's public key, used to create verify his identity to the server and other users,
+    - identityX22519 - a main key in the X22519, which is neccesary for derivying keys,
+    - identityx25519signature - a signature of X22519, used to verify the owner,
+    - signedprekey - main prekey, used to derive keys,
+    - prekeySignature - signature of the main prekey,
     - authtoken - user's cookie, verified on connection,
 - live - table containing live connection information:
     - userid - id of the connected user,
     - socket - the socket the user is connected to
-- prekey - table containing users' prekeys (TBI):
+- prekey - table containing users' prekeys:
     - id - unique prekey identifier number,
     - userid - id of the creator of the prekey,
+    - keyno - prekey number used to differentiate between them by the owner
     - prekey - the prekey
-- messages - table where messages are stored before they are sent to a user (TBI)
-
+- message - table where messages are stored before they are sent to a user:
+    - id - unique message identifying number,
+    - senderID - id of the sender,
+    - receiverID - id of the receiver,
+    - type - type of message ("first" for establishing the secret, "normal" for communication)
+    - message - the message
+  
 The user has access to 3 screens:
 - /register - allows the user to create an account
 - /login - allows the user to log in with their username and private key (TBI)
-- / - allows users to add friends (TBI) and send them messages
+- / - allows users to add friends and send them messages (TBI)
 
 ## Actual functionality
 
@@ -42,7 +74,7 @@ Prekeys (TBI)
 - [ ] storing messages on device
 - [ ] read markings
 
-### SIDE-QUESTS
+### Side-Quests
 by how likely/easy they are to be implemented (more or less)
 - [ ] profile pictures
 - [ ] login - deriving public key from provided private
@@ -53,3 +85,6 @@ by how likely/easy they are to be implemented (more or less)
 
 ### MAYBE ONE DAY
 - [ ] voice calls
+
+#### Notes
+> This technically isn't the Signal Protocol. In the actual Signal, the identity is an XEd25519 curve (so one that can be used as X22519 and Ed25519 simultanously). This ensures the identities of both parties while generating the key. Here, I am yet to find a way do that in JS, so right now the user just sends an identiy key (identityPublicKey in users) and a separate X25519ke (identityX22519 in users), which they sign (identityX2259signature in users).
