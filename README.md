@@ -97,6 +97,7 @@ by how likely/easy they are to be implemented (more or less)
 - [ ] voice calls
 
 #### Notes
+
 <span id="note1">
 *This technically isn't the Signal Protocol. In the actual Signal, the identity is an XEd25519 curve (so one that can be used as X22519 and Ed25519 simultanously). This ensures the identities of both parties while generating the key. Here, I am yet to find a way do that in JS, so right now the user just sends an identity key ([identityPublicKey](#IPK) in users) and a separate X25519 key [identityX22519](#IX) in users), which they sign ([identityX2259signature](#IXS) in users).*
 </span>
