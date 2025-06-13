@@ -4,7 +4,7 @@ In time, this will hopefully become a clone of Signal.
 
 ## Table of contents
 1. [⬇️Installation](#Installation)
-2. [🏗️Structure](#How-ts-works-(structure))
+2. [🏗️Structure](#How-ts-works-structure)
 3. [🔧Functionality deep dive](#Actual-functionality)
 4. [🚀Further Development](#TO-DO)
 6. [📝Additional Notes](#Notes)
