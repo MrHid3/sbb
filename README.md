@@ -8,7 +8,8 @@ In time, this will hopefully become a clone of Signal.
 2. [🏗️Structure](#How-ts-works-structure)
 3. [🔧Functionality deep dive](#Actual-functionality)
 4. [🚀Further Development](#TO-DO)
-6. [📝Additional Notes](#Notes)
+5. [📝Additional Notes](#Notes)
+6. [🔍Sources](#Sources)
 
 ## Installation
 Requirements:
@@ -34,7 +35,7 @@ On the server side, there are 4 tables, containing:
     - username - unique user identifier,
     - secret - things the user needs to store on the server, encrypted (TBI),
     - <span id="IPK"> identityPublicKey - user's public key, used to create verify his identity to the server and other users, </span>
-    - <span id="IX">identityX22519 - a main key in the X22519[*](#notes1), which is neccesary for derivying keys, </span>
+    - <span id="IX">identityX22519 - a main key in the X22519[*](#note1), which is neccesary for derivying keys, </span>
     - <span id="IXS">identityx25519signature - a signature of X22519, used to verify the owner, </span>
     - <span id="SPK"> signedprekey - main prekey, used to derive keys, </span>
     - <span id="SPKS">prekeySignature - signature of the main prekey, </span>
@@ -67,10 +68,10 @@ When a user registers on /register, they create three pairs of keys: [identity](
 Login (TBI)
 
 When a user gets on / and connects to a socket, a multitude of checks are run:
-    - **does the user have an Authtoken** - *if not, disconnect the socket and redirect user to /register (TBI)*
-    - **is the Authtoken valid** - *if not, disconnect the socket and redirect user to /register (TBI); otherwise, add user to live table, so the socket can be easily linked back to a user*
-    - **does the user have enough  prekeys in the database** - *if not, request prekeys from the user*
-    - **does the user have any pending messages** - *if so, send them to the user*
+- **does the user have an Authtoken** - *if not, disconnect the socket and redirect user to /register (TBI)*
+- **is the Authtoken valid** - *if not, disconnect the socket and redirect user to /register (TBI); otherwise, add user to live table, so the socket can be easily linked back to a user*
+- **does the user have enough  prekeys in the database** - *if not, request prekeys from the user*
+- **does the user have any pending messages** - *if so, send them to the user*
 
 On /, the user can also add a friend (like specified [in the Signal documentation](#signal)[*](#note1)). They fetch a bundle from /fetchbundle ([Authtoken](#authtoken) is checked here, and if authorized the [one-time-prekey]("prekey") is deleted from the server) and based on it they perform triple Diffie-Hellman. They keep the secret and send  to the other user their ephemeral public key, their AD, their iv and their [identityX22519 key](#IX) (this is stored in table [message](#messageTable) as type "first"). When the user logs on, they get the option to accept the request (TBI), and if they do they perform a triple Diffie-Hellman on the provided values, and then tries to decode the first message. If everything goes well, a shared secret is established between the two.
 
@@ -100,10 +101,10 @@ by how likely/easy they are to be implemented (more or less)
 **This technically isn't the Signal Protocol. In the actual Signal, the identity is an XEd25519 curve (so one that can be used as X22519 and Ed25519 simultanously). This ensures the identities of both parties while generating the key. Here, I am yet to find a way do that in JS, so right now the user just sends an identity key ([identityPublicKey](#IPK) in users) and a separate X25519 key [identityX22519](#IX) in users), which they sign ([identityX2259signature](#IXS) in users).**
 </span>
 
-####Sources
+#### Sources
 
 <span id="signal">[The Signal Documentation](https://signal.org/docs/specifications):
-	- [X3DH (triple Diffie-Hellman)](https://signal.org/docs/specifications/x3dh)[*](#note1)
-	- [Double Rachet](https://signal.org/docs/specifications/doubleratchet/)
-	- [Algorythm Standards](https://signal.org/docs/specifications/xeddsa/)
+- [X3DH (triple Diffie-Hellman)](https://signal.org/docs/specifications/x3dh)[*](#note1)
+- [Double Rachet](https://signal.org/docs/specifications/doubleratchet/)
+- [Algorythm Standards](https://signal.org/docs/specifications/xeddsa/)
 </span>
