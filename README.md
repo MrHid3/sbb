@@ -80,7 +80,7 @@ On /, the user can also add a friend (like specified [in the Signal documentatio
 
 ### TO-DO
 - [x] user creation
-- [ ] implement Diffie-Helman
+- [x] implement Diffie-Helman
 - [ ] adding friends
 - [ ] implement Double Ratchet
 - [ ] key rotation for prekeys

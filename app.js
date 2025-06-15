@@ -24,6 +24,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 //     credentials: true //allow cookies
 // }))
 
+//for debugging
+pool.query('truncate users; truncate prekey; truncate message')
+
 //prepare databases
 pool.query('CREATE table IF NOT EXISTS users(' +
     'id serial,' +
@@ -91,17 +94,17 @@ io.on('connection', async (socket) => {
 
     socket.on('message', async(data) => {
         //check if user is online
-        const senderIDQuery = await pool.query("SELECT userid FROM live WHERE socket = $1", [socket.id])
+        const senderQuery = await pool.query("SELECT users.id, users.username FROM live join users on users.id = live.userid WHERE socket = $1", [socket.id])
         const isReceiverOnlineQuery = await pool.query("SELECT socket FROM live WHERE userid = $1", [data.sendTo]);
         //check user isn't sending to himself
-        if(senderIDQuery.rows[0].userid == data.sendTo)
+        if(senderQuery.rows[0].userid == data.sendTo)
             return;
         //if online, send straight to him
         if(isReceiverOnlineQuery.rows[0] != null){
-            io.to(isReceiverOnlineQuery.rows[0].socket).emit("message", {sender: senderIDQuery.rows[0].userid, type: data.type, message: JSON.stringify(data.message)});
+            io.to(isReceiverOnlineQuery.rows[0].socket).emit("message", {sender: senderQuery.rows[0], type: data.type, message: JSON.stringify(data.message)});
         }else{
             //if not, store in database
-            await pool.query("INSERT INTO message(senderID, receiverID, type, message) values($1, $2, $3, $4)", [senderIDQuery.rows[0].userid, data.sendTo, data.type, data.message])
+            await pool.query("INSERT INTO message(senderID, receiverID, type, message) values($1, $2, $3, $4)", [senderQuery.rows[0].userid, data.sendTo, data.type, data.message])
         }
     })
 
