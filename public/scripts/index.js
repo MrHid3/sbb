@@ -124,32 +124,21 @@ searchUserForm.addEventListener('submit', async (e) => {
     sharedSecret = await algs.X3DH(myX25519, privateEphemeralKey, X22519key, signedPrekey, oneTimePrekey);
     const AD = new Uint8Array([...new TextEncoder().encode(myX25519), ...new TextEncoder().encode(X22519key)]);
     const keyData = new TextEncoder().encode(sharedSecret);
-    const plaintextBuffer = new TextEncoder().encode("MESSAGE");
     // Import the key
     const key = await crypto.subtle.importKey(
         'raw',
         sharedSecret,
         { name: 'AES-GCM' },
         true,
-        ['encrypt']
+        ['decrypt', 'encrypt']
     );
     //cryptography bullshit
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ciphertext = await crypto.subtle.encrypt(
-        {
-            name: 'AES-GCM',
-            iv: iv,
-            additionalData: AD,
-            tagLength: 128
-        },
-        key,
-        plaintextBuffer
-    );
-    console.log(sharedSecret)
+    const ciphertext = await algs.encrypt(iv, key, 'MESSAGE', AD);
     // const result = new Uint8Array(iv.length + ciphertext.byteLength);
     //save important stuff to localstorage, send information to server so we can get friends
     const exportedSecret = await crypto.subtle.exportKey("jwk", key);
-    friends.push({id: bundle.id, username: bundle.username, secret: exportedSecret, messages: []});
+    friends.push({id: bundle.id, username: bundle.username, secret: {sharedSecret: exportedSecret, iv: iv}, messages: []});
     localStorage.setItem("friends", JSON.stringify(friends));
     socket.emit("message", {type: "first", sendTo: bundle.id, message: {IKa: myX25519Public, EKa: publicEphemeralKey, keyno: keyno, initial: ciphertext, iv: iv, AD: AD}})
 })
@@ -183,56 +172,69 @@ socket.on('message', async(data) => {
     //now we gotta make friends
     //TODO: ogarnąć co jeśli nie ma prekey
     if(data.type == "first"){
-        const message = JSON.parse(data.message);
-        let mOTK = null;
-        let friends;
-        try {
-            friends = JSON.parse(localStorage.getItem('friends')) || [];
-        } catch (e) {
-            friends = [];
+        try{
+            const message = JSON.parse(data.message);
+            let mOTK = null;
+            let friends;
+            try {
+                friends = JSON.parse(localStorage.getItem('friends')) || [];
+            } catch (e) {
+                friends = [];
+            }
+            if(friends.find(e => e.id == data.sender.id) !== undefined){
+                console.log("We've known eachother for so long");
+                return;
+            }
+            if(message.keyno != null){
+                let OTKs = JSON.parse(localStorage.getItem("preKeys"))
+                mOTK = OTKs.find(e => e.keyno == message.keyno);
+                localStorage.setItem('preKeys', JSON.stringify(OTKs.filter(prekey => prekey.keyno != message.keyno)));
+            }
+            const sharedSecret = await algs.X3DH2theX3DHing(myX25519, privatePrekey, mOTK == null ? null : mOTK.prekey, message.EKa, message.IKa);
+            const key = await crypto.subtle.importKey(
+                'raw',
+                sharedSecret,
+                { name: 'AES-GCM' },
+                true,
+                ['decrypt', 'encrypt']
+            );
+            const clearText = await algs.decrypt(new Uint8Array(message.iv.data), key, new Uint8Array(message.initial.data), new Uint8Array(message.AD.data));
+            const exportedSecret = await crypto.subtle.exportKey("jwk", key);
+            friends.push({
+                id: data.sender.id,
+                username: data.sender.username,
+                secret: {sharedSecret: exportedSecret, iv: new Uint8Array(message.iv.data)},
+                messages: []
+            });
+            localStorage.setItem('friends', JSON.stringify(friends));
+            const reply = await algs.encrypt(new Uint8Array(message.iv.data), key, 'itworks')
+            //if succesful, send confirmation
+            socket.emit("message", {type: "firstreply", sendTo: data.sender.id, message: reply, failed: false})
+        }catch(e){
+            //otherwise, send a negation (?)
+            socket.emit("message", {type: "firstreply", sendTo: data.sender.id, message: e, failed: true})
         }
-        if(friends.find(e => e.id == data.sender.id) !== undefined){
-            console.log("We've known eachother for so long");
+    }else if(data.type == "firstreply"){
+        if(data.failed){
+            console.log("No friends for you")
             return;
         }
-        if(message.keyno != null){
-            let OTKs = JSON.parse(localStorage.getItem("preKeys"))
-            mOTK = OTKs.find(e => e.keyno == message.keyno);
-            localStorage.setItem('preKeys', JSON.stringify(OTKs.filter(prekey => prekey.keyno != message.keyno)));
-        }
-        console.log(myX25519, privatePrekey, mOTK == null ? null : mOTK.prekey, message.EKa, message.IKa)
-        const sharedSecret = await algs.X3DH2theX3DHing(myX25519, privatePrekey, mOTK == null ? null : mOTK.prekey, message.EKa, message.IKa);
-        const key = await crypto.subtle.importKey(
-            'raw',
-            sharedSecret,
-            { name: 'AES-GCM' },
-            true,
-            ['decrypt']
-        );
-        console.log(sharedSecret);
-        try{
-            const ciphertext = await crypto.subtle.decrypt(
-                {
-                    name: 'AES-GCM',
-                    iv: new Uint8Array(message.iv.data),
-                    additionalData: new Uint8Array(message.AD.data),
-                    tagLength: 128
-                },
-                key,
-                new Uint8Array(message.initial.data)
+        const friends = JSON.parse(localStorage.getItem('friends'));
+        const friend = friends.find(f => f.id == data.sender.id);
+        // try{
+            const key = await crypto.subtle.importKey(
+                'jwk',
+                friend.secret.sharedSecret,
+                { name: 'AES-GCM' },
+                true,
+                ['decrypt', 'encrypt']
             );
-            const exportedSecret = await crypto.subtle.exportKey("jwk", key);
-            if(new TextDecoder().decode(ciphertext) == "MESSAGE") {
-                friends.push({
-                    id: data.sender.id,
-                    username: data.sender.username,
-                    secret: exportedSecret,
-                    messages: []
-                });
-                localStorage.setItem('friends', JSON.stringify(friends));
-            }
-        }catch(e){
-            console.log("Ciphertext not decoded correctly, sucks to suck")
-        }
+            console.log(data.message)
+            const clearReply = await algs.decrypt(new Uint8Array(friend.secret.iv), key, new Uint8Array(data.message.data));
+            console.log("succes")
+        // }catch(e){
+        //     console.log("Kaine friende fur dich");
+        //     localStorage.setItem('friends', JSON.stringify(friends.filter(f => f.id == data.sender.id)));
+        // }
     }
 });
