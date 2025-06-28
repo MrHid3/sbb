@@ -37,6 +37,8 @@ document.querySelector('form').addEventListener('submit', async function(e) {
         localStorage.setItem('publicPrekey', JSON.stringify(publicPrekey));
         localStorage.setItem('identityX25519Private', JSON.stringify(identityX25519Private));
         localStorage.setItem('identityX25519Public', JSON.stringify(identityX25519Public));
+        localStorage.setItem('preKeys', JSON.stringify([]));
+        localStorage.setItem('friends', JSON.stringify([]));
         window.location.href = "/";
     }
 })

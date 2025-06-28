@@ -205,7 +205,6 @@ class algs{
     }
 
     static async X3DH2theX3DHing(myIdentityPrivate, myPrekeyPrivate, myOneTimePrivate, theirEphemeralPublic, theirIdentityPublic) {
-        console.log(0)
         const mIPK = await crypto.subtle.importKey(
             "jwk",
             myIdentityPrivate,
@@ -213,7 +212,6 @@ class algs{
             true,
             ["deriveBits"]
         );
-        console.log("a")
         const mSPK = await crypto.subtle.importKey(
             "jwk",
             myPrekeyPrivate,
@@ -221,7 +219,6 @@ class algs{
             true,
             ["deriveBits"]
         );
-        console.log("b")
         const tEP = await crypto.subtle.importKey(
             "jwk",
             theirEphemeralPublic,
@@ -229,7 +226,6 @@ class algs{
             true,
             []
         );
-        console.log("c")
         const tIPK = await crypto.subtle.importKey(
             "jwk",
             theirIdentityPublic,
@@ -238,7 +234,6 @@ class algs{
             []
         );
         let mOTK;
-        console.log(1)
         if (myOneTimePrivate != null) {
             mOTK = await crypto.subtle.importKey(
                 "jwk",
@@ -248,7 +243,6 @@ class algs{
                 ["deriveBits"]
             );
         }
-        console.log(2)
         const DH1 = await crypto.subtle.deriveBits(
             {
                 name: "X25519",
@@ -257,7 +251,6 @@ class algs{
             mSPK,
             256
         );
-        console.log(3)
         const DH2 = await crypto.subtle.deriveBits(
             {
                 name: "X25519",
@@ -266,7 +259,6 @@ class algs{
             mIPK,
             256
         );
-        console.log(4)
         const DH3 = await crypto.subtle.deriveBits(
             {
                 name: "X25519",
@@ -275,7 +267,6 @@ class algs{
             mSPK,
             256
         );
-        console.log(5)
         let DH4 = null;
         if (myOneTimePrivate != null) {
             DH4 = await crypto.subtle.deriveBits(
@@ -287,7 +278,6 @@ class algs{
                 256
             );
         }
-        console.log(6)
         let combinedSecrets;
         if (myOneTimePrivate != null) {
             combinedSecrets = new Uint8Array([
@@ -305,7 +295,6 @@ class algs{
         }
 
         //some cryptography magic
-        console.log(7)
         const keyMaterial = await crypto.subtle.importKey(
             'raw',
             combinedSecrets,
@@ -324,6 +313,34 @@ class algs{
             keyMaterial,
             256
         );
+    }
+
+    static async encrypt(iv, key, plainText, AD = new Uint8Array(new TextEncoder().encode('a'))){
+        const plaintextBuffer = new TextEncoder().encode(plainText)
+        return await crypto.subtle.encrypt(
+            {
+                name: 'AES-GCM',
+                iv: iv,
+                additionalData: AD,
+                tagLength: 128
+            },
+            key,
+            plaintextBuffer
+        );
+    }
+
+    static async decrypt(iv, key, cipherText, AD = new Uint8Array(new TextEncoder().encode('a'))){
+        const clearText = await crypto.subtle.decrypt(
+            {
+                name: 'AES-GCM',
+                iv: iv,
+                additionalData: AD,
+                tagLength: 128
+            },
+            key,
+            cipherText
+        );
+        return new TextDecoder().decode(clearText);
     }
 }
 
