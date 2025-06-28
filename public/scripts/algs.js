@@ -315,7 +315,7 @@ class algs{
         );
     }
 
-    static async encrypt(iv, key, plainText, AD = new Uint8Array(new TextEncoder().encode(''))){
+    static async encrypt(iv, key, plainText, AD = new Uint8Array(new TextEncoder().encode('a'))){
         const plaintextBuffer = new TextEncoder().encode(plainText)
         return await crypto.subtle.encrypt(
             {
@@ -329,7 +329,7 @@ class algs{
         );
     }
 
-    static async decrypt(iv, key, cipherText, AD = new Uint8Array(new TextEncoder().encode(''))){
+    static async decrypt(iv, key, cipherText, AD = new Uint8Array(new TextEncoder().encode('a'))){
         const clearText = await crypto.subtle.decrypt(
             {
                 name: 'AES-GCM',

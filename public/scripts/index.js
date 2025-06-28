@@ -172,7 +172,7 @@ socket.on('message', async(data) => {
     //now we gotta make friends
     //TODO: ogarnąć co jeśli nie ma prekey
     if(data.type == "first"){
-        try{
+        // try{
             const message = JSON.parse(data.message);
             let mOTK = null;
             let friends;
@@ -209,19 +209,20 @@ socket.on('message', async(data) => {
             localStorage.setItem('friends', JSON.stringify(friends));
             const reply = await algs.encrypt(new Uint8Array(message.iv.data), key, 'itworks')
             //if succesful, send confirmation
-            socket.emit("message", {type: "firstreply", sendTo: data.sender.id, message: reply, failed: false})
-        }catch(e){
-            //otherwise, send a negation (?)
-            socket.emit("message", {type: "firstreply", sendTo: data.sender.id, message: e, failed: true})
-        }
+            socket.emit("message", {type: "firstreply", sendTo: data.sender.id, message: reply})
+        // }catch(e){
+        //     //otherwise, send a negation (?)
+        //     socket.emit("message", {type: "firstreply", sendTo: data.sender.id, message: ''})
+        // }
     }else if(data.type == "firstreply"){
-        if(data.failed){
+        console.log(data)
+        if(JSON.parse(data.message) == ''){
             console.log("No friends for you")
             return;
         }
         const friends = JSON.parse(localStorage.getItem('friends'));
         const friend = friends.find(f => f.id == data.sender.id);
-        // try{
+        try{
             const key = await crypto.subtle.importKey(
                 'jwk',
                 friend.secret.sharedSecret,
@@ -229,12 +230,10 @@ socket.on('message', async(data) => {
                 true,
                 ['decrypt', 'encrypt']
             );
-            console.log(data.message)
-            const clearReply = await algs.decrypt(new Uint8Array(friend.secret.iv), key, new Uint8Array(data.message.data));
-            console.log("succes")
-        // }catch(e){
-        //     console.log("Kaine friende fur dich");
-        //     localStorage.setItem('friends', JSON.stringify(friends.filter(f => f.id == data.sender.id)));
-        // }
+            const clearReply = await algs.decrypt(Uint8Array.from(Object.values(friend.secret.iv)), key, Uint8Array.from(Object.values(JSON.parse(data.message).data)));
+        }catch(e){
+            console.log("Kaine friende fur dich");
+            localStorage.setItem('friends', JSON.stringify(friends.filter(f => f.id == data.sender.id)));
+        }
     }
 });

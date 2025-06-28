@@ -25,7 +25,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // }))
 
 //for debugging
-pool.query('truncate users; truncate prekey; truncate message')
+// pool.query('truncate users; truncate prekey; truncate message')
 
 //prepare databases
 pool.query('CREATE table IF NOT EXISTS users(' +
@@ -104,7 +104,7 @@ io.on('connection', async (socket) => {
             io.to(isReceiverOnlineQuery.rows[0].socket).emit("message", {sender: senderQuery.rows[0], type: data.type, message: JSON.stringify(data.message)});
         }else{
             //if not, store in database
-            await pool.query("INSERT INTO message(senderID, receiverID, type, message) values($1, $2, $3, $4)", [senderQuery.rows[0].userid, data.sendTo, data.type, data.message])
+            await pool.query("INSERT INTO message(senderID, receiverID, type, message) values($1, $2, $3, $4)", [senderQuery.rows[0].userid, data.sendTo, data.type, JSON.stringify(data.message)])
         }
     })
 
