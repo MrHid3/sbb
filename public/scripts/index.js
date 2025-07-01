@@ -1,19 +1,20 @@
 import algs from "./algs.js"
 
 //for debugg
-localStorage.setItem("friends", [])
+// localStorage.setItem("friends", JSON.stringify([]))
 document.querySelector("#hiam").innerText = JSON.parse(localStorage.getItem('username'));
-
 
 const socket = io({
     withCredentials: true //send cookies
 });
 
-const form = document.getElementById('form');
-const input = document.getElementById('input');
-const messages = document.getElementById('messages');
-const id = document.getElementById('id');
-const sendTo = document.getElementById('sendTo');
+//show message to user
+function createMessageElement(sender, text){
+    const messages = document.getElementById('messages');
+    const li = document.createElement('li');
+    li.innerHTML = `<b>${sender}</b> ${text}`;
+    messages.appendChild(li);
+}
 
 //TODO: logout if any of these is missing
 const publicKey = JSON.parse(localStorage.getItem('publicKey'));
@@ -24,16 +25,53 @@ const username = JSON.parse(localStorage.getItem('username'));
 const myX25519 = JSON.parse(localStorage.getItem('identityX25519Private'));
 const myX25519Public = JSON.parse(localStorage.getItem('identityX25519Public'));
 
-// form.addEventListener('submit', (e) => {
-//     e.preventDefault();
-//     if (input.value) {
-//         socket.emit('message', {
-//             sendTo: sendTo.value,
-//             message: input.value
-//         });
-//         input.value = '';
-//     }
-// });
+//select chat - first friend by default
+//TODO: open on newest message
+const friendsList = document.getElementById('friends-list');
+const friends = JSON.parse(localStorage.getItem('friends'));
+let currentFriend = friends[0];
+let currentKey = await crypto.subtle.importKey(
+    'jwk',
+    currentFriend.secret.sharedSecret,
+    { name: 'AES-GCM' },
+    true,
+    ['decrypt', 'encrypt']
+);
+
+friends.forEach(async (friend) => {
+    const div = document.createElement('div');
+    div.classList.add('friend-element');
+    div.innerText = friend.username;
+    div.addEventListener('click', async (e) => {
+        currentFriend = friend;
+        currentKey = await crypto.subtle.importKey(
+            'jwk',
+            currentFriend.secret.sharedSecret,
+            { name: 'AES-GCM' },
+            true,
+            ['decrypt', 'encrypt']
+        );
+    })
+    friendsList.appendChild(div);
+})
+
+
+//actually sending the message
+const messageForm = document.getElementById('form');
+const input = document.getElementById('input');
+
+messageForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (input.value) {
+        socket.emit('message', {
+            type: 'regular',
+            sendTo: currentFriend.id,
+            message: await algs.encrypt(Uint8Array.from(Object.values(currentFriend.secret.iv)), currentKey, input.value)
+        });
+        createMessageElement(username, input.value);
+        input.value = '';
+    }
+});
 
 //search for users
 const searchUserForm = document.querySelector('#search-user-form');
@@ -84,7 +122,7 @@ searchUserInput.addEventListener('input', async (e) => {
     }
 })
 
-//diffie-hellman x3d
+//add a friend - diffie-hellman x3d
 searchUserForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const friend = e.target.user.value;
@@ -138,9 +176,27 @@ searchUserForm.addEventListener('submit', async (e) => {
     // const result = new Uint8Array(iv.length + ciphertext.byteLength);
     //save important stuff to localstorage, send information to server so we can get friends
     const exportedSecret = await crypto.subtle.exportKey("jwk", key);
-    friends.push({id: bundle.id, username: bundle.username, secret: {sharedSecret: exportedSecret, iv: iv}, messages: []});
+    friends.push({
+        id: bundle.id,
+        username: bundle.username,
+        secret: {
+            sharedSecret: exportedSecret,
+            iv: iv
+        },
+        messages: []
+    });
     localStorage.setItem("friends", JSON.stringify(friends));
-    socket.emit("message", {type: "first", sendTo: bundle.id, message: {IKa: myX25519Public, EKa: publicEphemeralKey, keyno: keyno, initial: ciphertext, iv: iv, AD: AD}})
+    socket.emit("message", {
+        type: "first",
+        sendTo: bundle.id,
+        message: {
+            IKa: myX25519Public,
+            EKa: publicEphemeralKey,
+            keyno: keyno,
+            initial: ciphertext,
+            iv: iv,
+            AD: AD
+        }})
 })
 
 //provide prekeys if requested by server
@@ -198,7 +254,12 @@ socket.on('message', async(data) => {
                 true,
                 ['decrypt', 'encrypt']
             );
-            const clearText = await algs.decrypt(new Uint8Array(message.iv.data), key, new Uint8Array(message.initial.data), new Uint8Array(message.AD.data));
+            const clearText = await algs.decrypt(
+                new Uint8Array(message.iv.data),
+                key,
+                new Uint8Array(message.initial.data),
+                new Uint8Array(message.AD.data)
+            );
             const exportedSecret = await crypto.subtle.exportKey("jwk", key);
             friends.push({
                 id: data.sender.id,
@@ -207,20 +268,27 @@ socket.on('message', async(data) => {
                 messages: []
             });
             localStorage.setItem('friends', JSON.stringify(friends));
-            const reply = await algs.encrypt(new Uint8Array(message.iv.data), key, 'itworks')
+            const reply = await algs.encrypt(
+                new Uint8Array(message.iv.data),
+                key,
+                'itworks'
+            );
             //if succesful, send confirmation
-            socket.emit("message", {type: "firstreply", sendTo: data.sender.id, message: reply})
+            socket.emit("message", {
+                type: "firstreply",
+                sendTo: data.sender.id,
+                message: reply
+            })
         // }catch(e){
         //     //otherwise, send a negation (?)
         //     socket.emit("message", {type: "firstreply", sendTo: data.sender.id, message: ''})
         // }
+
     }else if(data.type == "firstreply"){
-        console.log(data)
         if(JSON.parse(data.message) == ''){
             console.log("No friends for you")
             return;
         }
-        const friends = JSON.parse(localStorage.getItem('friends'));
         const friend = friends.find(f => f.id == data.sender.id);
         try{
             const key = await crypto.subtle.importKey(
@@ -230,10 +298,29 @@ socket.on('message', async(data) => {
                 true,
                 ['decrypt', 'encrypt']
             );
-            const clearReply = await algs.decrypt(Uint8Array.from(Object.values(friend.secret.iv)), key, Uint8Array.from(Object.values(JSON.parse(data.message).data)));
+            const clearReply = await algs.decrypt(
+                Uint8Array.from(Object.values(friend.secret.iv)),
+                key,
+                Uint8Array.from(Object.values(JSON.parse(data.message).data))
+            );
         }catch(e){
             console.log("Kaine friende fur dich");
             localStorage.setItem('friends', JSON.stringify(friends.filter(f => f.id == data.sender.id)));
         }
+    }else if(data.type == "regular"){
+        const friend = friends.find(f => f.id == data.sender.id);
+        const key = await crypto.subtle.importKey(
+            'jwk',
+            friend.secret.sharedSecret,
+            { name: 'AES-GCM' },
+            true,
+            ['decrypt', 'encrypt']
+        );
+        const clearMessage = await algs.decrypt(
+            Uint8Array.from(Object.values(friend.secret.iv)),
+            key,
+            Uint8Array.from(Object.values(JSON.parse(data.message).data))
+        );
+        createMessageElement(friend.username, clearMessage)
     }
 });

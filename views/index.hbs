@@ -1,22 +1,29 @@
-<a href="/logout">Logout</a>
-<div id="hiam"></div>
-<div id="friends">
-    <form action="#" id="search-user-form">
-        <datalist id="user-suggestions"></datalist>
-        <input id="search-user-input" name="user" type="text" autoComplete="on" list="user-suggestions"/>
-        <input type="submit" value="Find a friend">
-    </form>
-</div>
-<div id="chat">
-    <ul id="messages"></ul>
-    <form id="form" action="">
-        <input id="id" disabled/>
-        <input id="sendTo" autocomplete="off" />
-        <input id="input" autocomplete="off" />
-        <button>Send</button>
-    </form>
+<link rel='stylesheet' href='/stylesheets/index.css' />
 
+<div id="container">
+    <div id="friends">
+        <a href="/logout">Logout</a>
+        <div id="hiam"></div>
+        <form action="#" id="search-user-form">
+            <datalist id="user-suggestions"></datalist>
+            <input id="search-user-input" name="user" type="text" autoComplete="on" list="user-suggestions"/>
+            <input type="submit" value="Find a friend">
+        </form>
+        <div id="friends-list"></div>
+    </div>
+    <div id="chat">
+        <ul id="messages"></ul>
+        <form id="form" action="">
+            <input id="id" disabled/>
+            <input id="sendTo" autocomplete="off" />
+            <input id="input" autocomplete="off" />
+            <button>Send</button>
+        </form>
+
+    </div>
 </div>
+
+
 
 <script src="socket.io/socket.io.js"></script>
 <script src="scripts/index.js" type="module"></script>

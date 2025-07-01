@@ -14,6 +14,7 @@ In time, this will hopefully become a clone of Signal.
 
 ## Installation
 *the project isn't completed yet and this probably doesn't work*
+
 Requirements:
     - nodejs
     - postgresql
@@ -82,7 +83,7 @@ On /, the user can also add a friend (like specified [in the Signal documentatio
 ### TO-DO
 - [x] user creation
 - [x] implement Diffie-Helman
-- [ ] adding friends
+- [x] adding friends
 - [ ] implement Double Ratchet
 - [ ] key rotation for prekeys
 - [ ] storing messages on device
