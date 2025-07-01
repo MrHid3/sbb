@@ -13,6 +13,7 @@ In time, this will hopefully become a clone of Signal.
 6. [🔍Sources](#Sources)
 
 ## Installation
+*the project isn't completed yet and this probably doesn't work*
 Requirements:
     - nodejs
     - postgresql
@@ -86,6 +87,7 @@ On /, the user can also add a friend (like specified [in the Signal documentatio
 - [ ] key rotation for prekeys
 - [ ] storing messages on device
 - [ ] read markings
+- [ ] dockerize ts
 
 ### Side-Quests
 by how likely/easy they are to be implemented (more or less)
