@@ -16,8 +16,8 @@ In time, this will hopefully become a clone of Signal.
 *the project isn't completed yet and this probably doesn't work*
 
 Requirements:
-    - nodejs
-    - postgresql
+- nodejs
+- postgresql
 
 (with git installed)
 ```
