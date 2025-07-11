@@ -80,7 +80,7 @@ On /, the user can also add a friend (like specified [in the Signal documentatio
 
 ---
 
-### TO-DO
+### Main Release
 - [x] user creation
 - [x] implement Diffie-Helman
 - [x] adding friends
@@ -89,7 +89,8 @@ On /, the user can also add a friend (like specified [in the Signal documentatio
 - [ ] storing messages on device
 - [ ] read markings
 - [ ] dockerize ts
-- [ ] remaking the frontend in react is probably a good idea
+- [ ] remaking the frontend in vue
+- [ ] add tests in webdriver.io
 
 ### Side-Quests
 by how likely/easy they are to be implemented (more or less)
