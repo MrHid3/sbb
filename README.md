@@ -100,6 +100,7 @@ by how likely/easy they are to be implemented (more or less)
 - [ ] private conversations
 - [ ] someone is writing bubbles
 - [ ] group chats
+- [ ] mobile app
 
 ### Maybe One Day
 - [ ] voice calls
