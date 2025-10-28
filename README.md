@@ -91,6 +91,7 @@ On /, the user can also add a friend (like specified [in the Signal documentatio
 - [ ] dockerize ts
 - [ ] remaking the frontend in vue
 - [ ] add tests in webdriver.io
+- [ ] basically remake half of this, split backend and frontend, maybe port to typescript
 
 ### Side-Quests
 by how likely/easy they are to be implemented (more or less)
